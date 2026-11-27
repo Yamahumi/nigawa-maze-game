@@ -3,7 +3,7 @@
 
   const LIVES0 = 5;
   const PLAYER_SPEED = 5.1;
-  const ENEMY_SPEED = { chase: 3.05, ambush: 2.9, random: 2.55, patrol: 2.75, fright: 1.95, eyes: 7.2 };
+  const ENEMY_SPEED = { chase: 2.20, ambush: 2.09, random: 1.84, patrol: 1.98, fright: 1.40, eyes: 7.2 };
   const POWER_SECS = 11;
   const GRACE_SECS = 2.4;
   const EAT_POINTS = [200, 400, 800, 1600];
@@ -51,7 +51,9 @@
     coop: "コープ",
     ohsho: "おおさかおうしょう",
     school: "にがわしょうがっこう",
+    jhs: "たからづかちゅうがっこう",
     hoshi: "ホシのびょういん",
+    laundry: "コインランドリー",
     dentist: "はいしゃ",
     home: "いえ",
     pannel: "パンネル",
@@ -360,6 +362,7 @@
       el.titleScreen.hidden = true;
       el.endScreen.hidden = false;
     }
+    layout();
   }
 
   function startStage(id) {
@@ -672,7 +675,7 @@
         : powerT > 0
           ? ENEMY_SPEED.fright
           : graceT > 0
-            ? 1.2
+            ? 0.86
             : ENEMY_SPEED[e.id] || ENEMY_SPEED.chase;
       e.mode = scatterCycle ? "scatter" : "chase";
 
@@ -749,12 +752,25 @@
     showMsg("スタート！", 1.2);
   }
 
+  function syncShell() {
+    const vv = window.visualViewport;
+    const w = vv ? vv.width : window.innerWidth;
+    const h = vv ? vv.height : window.innerHeight;
+    const landscape = w > h;
+    document.documentElement.classList.toggle("landscape", landscape);
+    if (el.app) el.app.classList.toggle("landscape", landscape);
+  }
+
   function layout() {
+    syncShell();
     const stage = document.getElementById("stage");
     const r = stage.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    viewW = Math.max(200, Math.floor(el.canvas.clientWidth || r.width));
-    viewH = Math.max(200, Math.floor(el.canvas.clientHeight || r.height));
+    // ステージの中にキャンバスをぴったり置く。CSSで引き伸ばさない。
+    viewW = Math.max(160, Math.floor(r.width));
+    viewH = Math.max(160, Math.floor(r.height));
+    el.canvas.style.width = viewW + "px";
+    el.canvas.style.height = viewH + "px";
     el.canvas.width = Math.max(1, Math.floor(viewW * dpr));
     el.canvas.height = Math.max(1, Math.floor(viewH * dpr));
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -762,6 +778,8 @@
       if (level.fitAll) {
         tile = Math.floor(Math.min(viewW / level.w, viewH / level.h));
         tile = Math.max(14, tile);
+      } else if (document.documentElement.classList.contains("landscape")) {
+        tile = Math.max(26, Math.min(36, Math.floor(Math.min(viewW / 13, viewH / 9))));
       } else {
         tile = Math.max(26, Math.min(36, Math.floor(Math.min(viewW / 11, viewH / 13))));
       }
@@ -1012,6 +1030,20 @@
         ctx.fillRect(-r * 0.85, -r * 0.22, r * 1.7, r * 0.28);
         ctx.fillStyle = lm.visited ? "#c8ecff" : "#7ec8ff";
         ctx.fillRect(-r * 0.45, r * 0.18, r * 0.9, r * 0.42);
+      } else if (lm.kind === "laundry") {
+        ctx.fillStyle = lm.visited ? "#c8e8ff" : "#5ab4e8";
+        ctx.beginPath();
+        rounded(-r * 0.7, -r * 0.75, r * 1.4, r * 1.5, 4);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(0, -r * 0.08, r * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#2a6a90";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#2a6a90";
+        ctx.fillRect(-r * 0.55, r * 0.48, r * 1.1, r * 0.16);
       } else if (lm.kind === "shrine") {
         // とりい
         ctx.fillStyle = lm.visited ? "#ffb0a0" : "#e24a3a";
@@ -1036,10 +1068,14 @@
     const fs = Math.max(15, Math.min(22, tile * 0.62));
     ctx.font = "bold " + fs + "px " + fontFamily;
     const boxes = [];
-    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", station: "down", hoshi: "up", dentist: "down", benten: "down", kumano: "up" };
-    function boxFrom(text, x, y, align, base) {
-      const w = ctx.measureText(text).width;
-      const h = fs + 5;
+    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", dentist: "down", benten: "down", kumano: "up" };
+    function nameLines(name) {
+      if (name === "たからづかちゅうがっこう") return ["たからづか", "ちゅうがっこう"];
+      return [name];
+    }
+    function boxFrom(lines, x, y, align, base) {
+      const w = Math.max(...lines.map((s) => ctx.measureText(s).width));
+      const h = lines.length * (fs + 3);
       let l = x, top = y;
       if (align === "center") l = x - w / 2;
       else if (align === "right") l = x - w;
@@ -1062,6 +1098,7 @@
       const py = oy + (lm.y + 0.5) * tile;
       if (px < -tile * 5 || py < -tile * 5 || px > viewW + tile * 5 || py > viewH + tile * 5) continue;
       const label = lm.name;
+      const lines = nameLines(label);
       const gap = tile * 0.58;
       const cands = [
         { key: "up", x: px, y: py - gap, align: "center", base: "bottom" },
@@ -1077,20 +1114,26 @@
       if (pref) cands.sort((a, b) => (a.key === pref ? -1 : b.key === pref ? 1 : 0));
       let best = cands[0], bestHits = 99;
       for (const c of cands) {
-        const box = boxFrom(label, c.x, c.y, c.align, c.base);
+        const box = boxFrom(lines, c.x, c.y, c.align, c.base);
         let hits = 0;
         for (const b of boxes) if (overlaps(box, b, 4)) hits += 3;
         for (const b of iconBoxes) if (overlaps(box, b, 2)) hits += 1;
+        if (box.l < 6 || box.r > viewW - 6 || box.t < 6 || box.b > viewH - 6) hits += 5;
         if (hits < bestHits) { bestHits = hits; best = c; if (hits === 0) break; }
       }
-      boxes.push(boxFrom(label, best.x, best.y, best.align, best.base));
+      const placed = boxFrom(lines, best.x, best.y, best.align, best.base);
+      boxes.push(placed);
       ctx.textAlign = best.align;
-      ctx.textBaseline = best.base;
+      ctx.textBaseline = "middle";
       ctx.lineWidth = 4;
       ctx.strokeStyle = "rgba(8,16,36,0.85)";
       ctx.fillStyle = "#fff8e8";
-      ctx.strokeText(label, best.x, best.y);
-      ctx.fillText(label, best.x, best.y);
+      const lineH = fs + 3;
+      for (let i = 0; i < lines.length; i++) {
+        const ly = placed.t + lineH * (i + 0.5);
+        ctx.strokeText(lines[i], best.x, ly);
+        ctx.fillText(lines[i], best.x, ly);
+      }
     }
   }
 
@@ -1491,14 +1534,44 @@
   el.btnRetry.addEventListener("click", () => { unlockAudio(); startStage(stageId); });
   el.btnTitle.addEventListener("click", () => { unlockAudio(); setUI("title"); draw(); });
 
-  window.addEventListener("resize", () => { layout(); draw(); });
-  window.addEventListener("orientationchange", () => { setTimeout(() => { layout(); draw(); }, 200); });
+  function onViewport() {
+    layout();
+    if (level) updateCamera();
+    draw();
+  }
+  window.addEventListener("resize", onViewport);
+  window.addEventListener("orientationchange", () => {
+    setTimeout(onViewport, 50);
+    setTimeout(onViewport, 250);
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", onViewport);
+  }
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
 
   window.__mazeDebug = {
+    getLayout() {
+      const c = el.canvas;
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const cssW = c.clientWidth;
+      const cssH = c.clientHeight;
+      return {
+        landscape: document.documentElement.classList.contains("landscape"),
+        viewW: viewW,
+        viewH: viewH,
+        tile: tile,
+        cssW: cssW,
+        cssH: cssH,
+        bufW: c.width,
+        bufH: c.height,
+        dpr: dpr,
+        stretchX: cssW && c.width ? cssW / (c.width / dpr) : 0,
+        stretchY: cssH && c.height ? cssH / (c.height / dpr) : 0,
+      };
+    },
     getState() {
       if (!player || !level) return null;
       const scr = worldToScreen(player.x, player.y);
@@ -1515,6 +1588,8 @@
         camX: camX,
         camY: camY,
         tile: tile,
+        viewW: viewW,
+        viewH: viewH,
         graceT: graceT,
         enemies: enemies.map((en) => ({
           id: en.id,

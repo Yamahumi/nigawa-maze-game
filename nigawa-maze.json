@@ -258,6 +258,27 @@
       "snap_meters": 0.0
     },
     {
+      "id": "jhs",
+      "name": "宝塚市立宝塚第一中学校",
+      "lat": 34.781657,
+      "lon": 135.3484892,
+      "osm": "way/104223597",
+      "kind": "school",
+      "role": "safe",
+      "bonus": 800,
+      "note": "OSMの宝塚市立宝塚第一中学校。敷地の東端はマップ西端付近。最寄り道路 (3,11) はウエルほいくえんの北西（西へ10・北へ1）。中心はマップ外 cell≈(-1,13)。",
+      "raw_cell": [
+        2,
+        11
+      ],
+      "cell": [
+        3,
+        11
+      ],
+      "snap_cells": 1,
+      "snap_meters": 22.0
+    },
+    {
       "id": "hoshi",
       "name": "ホシのびょういん",
       "lat": 34.7758304,
@@ -408,6 +429,28 @@
       ],
       "snap_cells": 0,
       "snap_meters": 0.0
+    },
+    {
+      "id": "laundry",
+      "name": "コインランドリー",
+      "lat": 34.7764693,
+      "lon": 135.3573911,
+      "osm": null,
+      "kind": "laundry",
+      "role": "bonus",
+      "bonus": 500,
+      "placement": "user",
+      "note": "ユーザー指定：ホシのびょういんのすぐ北の道路 (39,37)。",
+      "raw_cell": [
+        39,
+        37
+      ],
+      "cell": [
+        39,
+        37
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
     }
   ],
   "playerStart": [
@@ -428,8 +471,8 @@
       3
     ],
     [
-      98,
-      55
+      0,
+      8
     ]
   ],
   "powerPellets": [

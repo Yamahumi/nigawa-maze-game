@@ -133,6 +133,17 @@ LANDMARKS = [
         "note": "ユーザー指定：OSMのスナップ先 (20,20) から東へ2マスの道路 (22,20) へ移動。安全地帯のまま。",
     },
     {
+        "id": "jhs",
+        "name": "宝塚市立宝塚第一中学校",
+        "lat": 34.7816570,
+        "lon": 135.3484892,
+        "osm": "way/104223597",
+        "kind": "school",
+        "role": "safe",
+        "bonus": 800,
+        "note": "OSMの宝塚市立宝塚第一中学校。敷地の東端はマップ西端付近。最寄り道路 (3,11) はウエルほいくえんの北西（西へ10・北へ1）。中心はマップ外 cell≈(-1,13)。",
+    },
+    {
         "id": "hoshi",
         "name": "ホシのびょういん",
         "lat": 34.7758304,
@@ -213,6 +224,18 @@ LANDMARKS = [
         "bonus": 700,
         "placement": "user",
         "note": "ユーザー指定：べんてんいけのすぐ北の道路マス（31,41）。近傍にOSMの熊野神社はなし。",
+    },
+    {
+        "id": "laundry",
+        "name": "コインランドリー",
+        "lat": 34.7764693,
+        "lon": 135.3573911,
+        "osm": None,
+        "kind": "laundry",
+        "role": "bonus",
+        "bonus": 500,
+        "placement": "user",
+        "note": "ユーザー指定：ホシのびょういんのすぐ北の道路 (39,37)。",
     },
 ]
 
@@ -972,7 +995,7 @@ def main():
     # ASCII preview (downsampled)
     print("\n--- preview ---")
     marks = {}
-    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J", "lawson": "L"}
+    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J", "lawson": "L", "jhs": "T", "laundry": "W"}
     for lm in LANDMARKS:
         marks[tuple(lm["cell"])] = letters[lm["id"]]
     for x, y in pellets:

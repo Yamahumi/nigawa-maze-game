@@ -93,13 +93,11 @@ html, body {
 }
 
 #game {
-  position: absolute;
-  inset: 0;
+  position: relative;
   display: block;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
+  /* サイズは game.js の layout() がCSSピクセルで指定。引き伸ばししない */
+  max-width: 100%;
+  max-height: 100%;
   touch-action: none;
 }
 
@@ -249,4 +247,130 @@ h2 {
   color: rgba(200, 214, 240, 0.7);
   padding: 2px 8px 4px;
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* よこむき：ゲームをまんなか、スコア左、そうさボタン右。タイルは正方形のまま */
+html.landscape #app,
+#app.landscape {
+  display: grid;
+  grid-template-columns: minmax(120px, 150px) minmax(0, 1fr) minmax(184px, 210px);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "hud stage dpad"
+    "attrib attrib attrib";
+}
+
+html.landscape #app:has(#hud[hidden]),
+#app.landscape:has(#hud[hidden]) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "stage"
+    "attrib";
+}
+
+html.landscape #hud,
+#app.landscape #hud {
+  grid-area: hud;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 8px 8px 10px;
+  min-height: 0;
+  height: 100%;
+  min-width: 0;
+}
+
+html.landscape .hud-block,
+#app.landscape .hud-block { min-width: 0; }
+html.landscape .hud-right,
+#app.landscape .hud-right { text-align: left; }
+html.landscape .hud-center,
+#app.landscape .hud-center { flex: 0 0 auto; text-align: left; }
+html.landscape .hud-value,
+#app.landscape .hud-value { font-size: 26px; }
+
+html.landscape #stage,
+#app.landscape #stage {
+  grid-area: stage;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+html.landscape #dpad,
+#app.landscape #dpad {
+  grid-area: dpad;
+  justify-content: center;
+  padding: 4px 8px;
+  height: 100%;
+}
+
+html.landscape .pad-mid,
+#app.landscape .pad-mid { gap: 32px; }
+
+html.landscape .pad,
+#app.landscape .pad {
+  width: 72px;
+  height: 72px;
+}
+
+html.landscape #attrib,
+#app.landscape #attrib {
+  grid-area: attrib;
+}
+
+html.landscape #title-screen.panel,
+html.landscape #end-screen.panel,
+#app.landscape #title-screen.panel,
+#app.landscape #end-screen.panel {
+  width: min(560px, 96%);
+  padding: 12px 16px;
+  border-width: 3px;
+  border-radius: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+  justify-items: stretch;
+}
+
+html.landscape .title-icon,
+#app.landscape .title-icon {
+  grid-column: 1 / -1;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  margin: 0 auto 0;
+}
+
+html.landscape h1,
+html.landscape h2,
+html.landscape .lead,
+html.landscape .howto,
+html.landscape .end-score,
+#app.landscape h1,
+#app.landscape h2,
+#app.landscape .lead,
+#app.landscape .howto,
+#app.landscape .end-score {
+  grid-column: 1 / -1;
+}
+
+html.landscape h1,
+#app.landscape h1 { font-size: 28px; margin: 0 0 0; }
+html.landscape h2,
+#app.landscape h2 { font-size: 26px; margin: 0; }
+html.landscape .lead,
+#app.landscape .lead { font-size: 16px; margin: 0; line-height: 1.35; }
+html.landscape .howto,
+#app.landscape .howto { margin: 0; font-size: 15px; }
+html.landscape .end-score,
+#app.landscape .end-score { font-size: 22px; margin: 0; }
+html.landscape .btn,
+#app.landscape .btn {
+  min-height: 56px;
+  font-size: 20px;
+  margin: 0;
+  width: 100%;
 }
