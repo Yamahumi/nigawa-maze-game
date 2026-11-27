@@ -47,6 +47,15 @@
     mandai: "マンダイ",
     racecourse: "はんしんけいばじょう",
     mcdonalds: "マクドナルド",
+    benten: "べんてんいけ",
+    coop: "コープ",
+    ohsho: "おおさかおうしょう",
+    school: "にがわしょうがっこう",
+    hoshi: "ホシのびょういん",
+    dentist: "はいしゃ",
+    home: "いえ",
+    pannel: "パンネル",
+    kumon: "くもん",
   };
 
   const ENEMY_META = [
@@ -228,6 +237,13 @@
       if (lm.role === "safe" || lm.role === "start_safe") safe.add(lm.x + "," + lm.y);
       cells[lm.y][lm.x] = " ";
     }
+    const areaFillCells = new Map();
+    for (const fill of (data.areaFills || [])) {
+      for (const run of fill.runs) {
+        const y = run[0], x0 = run[1], x1 = run[2];
+        for (let x = x0; x <= x1; x++) areaFillCells.set(x + "," + y, fill);
+      }
+    }
     return {
       id: "nigawa",
       name: "にがわステージ",
@@ -238,6 +254,8 @@
       house: [],
       landmarks,
       safe,
+      areaFillCells,
+      areaLabels: data.areaLabels || [],
       fitAll: false,
       attrib: true,
     };
@@ -293,6 +311,7 @@
         corner,
         mode: "scatter",
         eaten: false,
+        passedThisTile: false,
       };
     });
     powerT = 0;
@@ -596,6 +615,51 @@
     return { x: px, y: py };
   }
 
+  function isDeadEndCell(x, y, who) {
+    let n = 0;
+    for (const d of DIR_LIST) {
+      if (!isWallFor(level, x + d.x, y + d.y, who)) n++;
+    }
+    return n <= 1;
+  }
+
+  function chooseEnemyDir(e, who) {
+    let opts = validDirs(e, who, false);
+    if (!opts.length) return;
+    // 行き止まりにむかいこまない（往復で止まるのを防ぐ）
+    const open = opts.filter((d) => !isDeadEndCell(Math.round(e.x) + d.x, Math.round(e.y) + d.y, who));
+    if (open.length) opts = open;
+    // ハウスの中にいるときはドア／そとへ出る
+    const ecx = Math.round(e.x), ecy = Math.round(e.y);
+    const here = cellAt(level, ecx, ecy);
+    if (here === "H" || here === "-") {
+      const door = opts.filter((d) => cellAt(level, ecx + d.x, ecy + d.y) === "-");
+      const out = opts.filter((d) => {
+        const c = cellAt(level, ecx + d.x, ecy + d.y);
+        return c !== "H" && c !== "#" && c !== "-";
+      });
+      if (door.length) opts = door;
+      else if (out.length) opts = out;
+    }
+    const tgt = targetFor(e);
+    if (tgt && tgt.flee) {
+      const px = Math.round(player.x), py = Math.round(player.y);
+      let best = opts[0], bestD = -1;
+      for (const d of opts) {
+        const nx = e.x + d.x, ny = e.y + d.y;
+        const dist = Math.abs(nx - px) + Math.abs(ny - py);
+        if (dist > bestD) { bestD = dist; best = d; }
+      }
+      e.dir = best;
+    } else if (e.id === "random" && !e.eaten && powerT <= 0) {
+      e.dir = opts[Math.floor(Math.random() * opts.length)] || e.dir;
+    } else if (tgt) {
+      e.dir = pickClosest(opts, e, tgt.x, tgt.y) || e.dir;
+    } else {
+      e.dir = opts[0] || e.dir;
+    }
+  }
+
   function updateEnemies(dt) {
     if (debugFreezeEnemies) return;
     const scatterCycle = !powerT && graceT <= 0 && (Math.floor((performance.now() / 1000) % 16) < 4);
@@ -610,29 +674,26 @@
             : ENEMY_SPEED[e.id] || ENEMY_SPEED.chase;
       e.mode = scatterCycle ? "scatter" : "chase";
 
-      if (nearCenter(e, 0.2)) {
+      // てきがマス中心に吸い戻されない：このマスで未決定のときだけ向きを選ぶ
+      const cx = Math.round(e.x), cy = Math.round(e.y);
+      if (nearCenter(e, 0.18) && !e.passedThisTile) {
         snapCenter(e);
-        const opts = validDirs(e, who, false);
-        const tgt = targetFor(e);
-        if (tgt && tgt.flee) {
-          // maximize distance from player
-          const px = Math.round(player.x), py = Math.round(player.y);
-          let best = opts[0], bestD = -1;
-          for (const d of opts) {
-            const nx = e.x + d.x, ny = e.y + d.y;
-            const dist = Math.abs(nx - px) + Math.abs(ny - py);
-            if (dist > bestD) { bestD = dist; best = d; }
-          }
-          if (best) e.dir = best;
-        } else if (e.id === "random" && !e.eaten && powerT <= 0) {
-          e.dir = opts[Math.floor(Math.random() * opts.length)] || e.dir;
-        } else if (tgt) {
-          e.dir = pickClosest(opts, e, tgt.x, tgt.y) || e.dir;
-        } else {
-          e.dir = opts[0] || e.dir;
-        }
+        chooseEnemyDir(e, who);
+        e.passedThisTile = true;
+        e.decidedX = cx;
+        e.decidedY = cy;
       }
-      moveActor(e, e.dir, speed, dt, who);
+      const r = moveActor(e, e.dir, speed, dt, who);
+      if (r === "blocked") {
+        snapCenter(e);
+        e.passedThisTile = false;
+        chooseEnemyDir(e, who);
+        e.passedThisTile = true;
+        e.decidedX = Math.round(e.x);
+        e.decidedY = Math.round(e.y);
+      } else if (!nearCenter(e, 0.2)) {
+        e.passedThisTile = false;
+      }
       if (level.wrap) {
         if (e.x < -0.5) e.x += level.w;
         if (e.x >= level.w - 0.5) e.x -= level.w;
@@ -717,10 +778,11 @@
 
     const ox = -camX * tile, oy = -camY * tile;
     // walls (buildings / blocks) filled first
-    ctx.fillStyle = wallFill;
     for (let y = top; y <= bot; y++) {
       for (let x = left; x <= right; x++) {
         if (level.cells[y][x] !== "#") continue;
+        const fill = level.areaFillCells && level.areaFillCells.get(x + "," + y);
+        ctx.fillStyle = fill ? (fill.color || "#2b5d3a") : wallFill;
         ctx.fillRect(ox + x * tile, oy + y * tile, tile + 0.5, tile + 0.5);
       }
     }
@@ -735,12 +797,13 @@
       }
     }
     // bright edges where a wall meets a corridor, so paths are easy to see
-    ctx.strokeStyle = wallEdge;
     ctx.lineWidth = Math.max(2, tile * 0.12);
     ctx.lineCap = "round";
     for (let y = top; y <= bot; y++) {
       for (let x = left; x <= right; x++) {
         if (level.cells[y][x] !== "#") continue;
+        const fill = level.areaFillCells && level.areaFillCells.get(x + "," + y);
+        ctx.strokeStyle = fill ? (fill.edge || "#8fd4a0") : wallEdge;
         const px = ox + x * tile, py = oy + y * tile;
         const open = (tx, ty) => ty >= 0 && ty < level.h && tx >= 0 && tx < level.w && level.cells[ty][tx] !== "#";
         ctx.beginPath();
@@ -837,6 +900,107 @@
         ctx.beginPath();
         ctx.arc(0, -r * 0.05, r * 0.55, Math.PI, 0);
         ctx.fill();
+      } else if (lm.kind === "pond") {
+        ctx.fillStyle = lm.visited ? "#9de8ff" : "#3dc6ff";
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.1, r * 0.95, r * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.45)";
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.2, -r * 0.05, r * 0.35, r * 0.18, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (lm.kind === "school") {
+        ctx.fillStyle = lm.visited ? "#c9e6ff" : "#5aa0ff";
+        ctx.beginPath();
+        rounded(-r * 0.85, -r * 0.15, r * 1.7, r * 0.95, 3);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(0, -r);
+        ctx.lineTo(r, -r * 0.1);
+        ctx.lineTo(-r, -r * 0.1);
+        ctx.closePath();
+        ctx.fillStyle = lm.visited ? "#7ed0ff" : "#2f6ed6";
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(-r * 0.18, r * 0.15, r * 0.36, r * 0.55);
+      } else if (lm.id === "ohsho") {
+        ctx.fillStyle = lm.visited ? "#ffc9a0" : "#ff7a45";
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.1, r * 0.5, r * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#b33a12";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, r * 0.05, r * 0.38, 0.15, Math.PI - 0.15);
+        ctx.stroke();
+      } else if (lm.kind === "hospital") {
+        ctx.fillStyle = lm.visited ? "#b8f0d8" : "#3ecf8a";
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(-r * 0.18, -r * 0.62, r * 0.36, r * 1.24);
+        ctx.fillRect(-r * 0.62, -r * 0.18, r * 1.24, r * 0.36);
+      } else if (lm.kind === "dentist") {
+        ctx.fillStyle = lm.visited ? "#d0f0ff" : "#4ec4e8";
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.4, -r * 0.35);
+        ctx.quadraticCurveTo(-r * 0.55, r * 0.15, -r * 0.2, r * 0.55);
+        ctx.lineTo(0, r * 0.15);
+        ctx.lineTo(r * 0.2, r * 0.55);
+        ctx.quadraticCurveTo(r * 0.55, r * 0.15, r * 0.4, -r * 0.35);
+        ctx.quadraticCurveTo(0, -r * 0.55, -r * 0.4, -r * 0.35);
+        ctx.fill();
+      } else if (lm.kind === "home") {
+        ctx.fillStyle = lm.visited ? "#ffd9a8" : "#ffb060";
+        ctx.beginPath();
+        ctx.moveTo(0, -r);
+        ctx.lineTo(r * 0.95, -r * 0.05);
+        ctx.lineTo(r * 0.7, -r * 0.05);
+        ctx.lineTo(r * 0.7, r * 0.85);
+        ctx.lineTo(-r * 0.7, r * 0.85);
+        ctx.lineTo(-r * 0.7, -r * 0.05);
+        ctx.lineTo(-r * 0.95, -r * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#7a3a10";
+        ctx.fillRect(-r * 0.18, r * 0.15, r * 0.36, r * 0.7);
+        ctx.fillStyle = "#fff6c8";
+        ctx.fillRect(-r * 0.55, r * 0.05, r * 0.28, r * 0.28);
+      } else if (lm.kind === "bakery") {
+        ctx.fillStyle = lm.visited ? "#ffe0a8" : "#e89a3a";
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff0c8";
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.1, r * 0.62, r * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#b86a18";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(0, r * 0.05, r * 0.42, Math.PI * 1.1, Math.PI * 1.9);
+        ctx.stroke();
+      } else if (lm.kind === "juku") {
+        ctx.fillStyle = lm.visited ? "#c8e8ff" : "#4a9cff";
+        ctx.beginPath();
+        rounded(-r * 0.85, -r * 0.7, r * 1.7, r * 1.4, 4);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(-r * 0.55, -r * 0.2, r * 1.1, r * 0.7);
+        ctx.fillStyle = "#2a5aaa";
+        ctx.font = "bold " + Math.max(8, tile * 0.32) + "px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("く", 0, r * 0.12);
       } else {
         ctx.fillStyle = lm.visited ? "#ffd9a0" : "#ff9f4a";
         ctx.beginPath();
@@ -846,17 +1010,117 @@
         ctx.fillRect(-r * 0.35, -r * 0.1, r * 0.7, r * 0.55);
       }
       ctx.restore();
-      // label
-      const fs = Math.max(15, Math.min(22, tile * 0.62));
-      ctx.font = "bold " + fs + "px 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
+    }
+    const fontFamily = "'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Noto Sans CJK JP', sans-serif";
+    const fs = Math.max(15, Math.min(22, tile * 0.62));
+    ctx.font = "bold " + fs + "px " + fontFamily;
+    const boxes = [];
+    const prefer = { home: "left", kumon: "left", pannel: "up", school: "down", station: "down", hoshi: "up", dentist: "down" };
+    function boxFrom(text, x, y, align, base) {
+      const w = ctx.measureText(text).width;
+      const h = fs + 5;
+      let l = x, top = y;
+      if (align === "center") l = x - w / 2;
+      else if (align === "right") l = x - w;
+      if (base === "bottom") top = y - h;
+      else if (base === "middle") top = y - h / 2;
+      return { l, t: top, r: l + w, b: top + h };
+    }
+    function overlaps(a, b, pad) {
+      return a.l < b.r + pad && a.r > b.l - pad && a.t < b.b + pad && a.b > b.t - pad;
+    }
+    const iconBoxes = [];
+    for (const lm of level.landmarks) {
+      const ix = ox + (lm.x + 0.5) * tile;
+      const iy = oy + (lm.y + 0.5) * tile;
+      const ir = tile * 0.5;
+      iconBoxes.push({ l: ix - ir, t: iy - ir, r: ix + ir, b: iy + ir });
+    }
+    for (const lm of level.landmarks) {
+      const px = ox + (lm.x + 0.5) * tile;
+      const py = oy + (lm.y + 0.5) * tile;
+      if (px < -tile * 5 || py < -tile * 5 || px > viewW + tile * 5 || py > viewH + tile * 5) continue;
+      const label = lm.name;
+      const gap = tile * 0.58;
+      const cands = [
+        { key: "up", x: px, y: py - gap, align: "center", base: "bottom" },
+        { key: "down", x: px, y: py + gap + 2, align: "center", base: "top" },
+        { key: "left", x: px - gap, y: py, align: "right", base: "middle" },
+        { key: "right", x: px + gap, y: py, align: "left", base: "middle" },
+        { key: "upleft", x: px - tile * 0.4, y: py - gap, align: "right", base: "bottom" },
+        { key: "upright", x: px + tile * 0.4, y: py - gap, align: "left", base: "bottom" },
+        { key: "downleft", x: px - tile * 0.4, y: py + gap + 2, align: "right", base: "top" },
+        { key: "downright", x: px + tile * 0.4, y: py + gap + 2, align: "left", base: "top" },
+      ];
+      const pref = prefer[lm.id];
+      if (pref) cands.sort((a, b) => (a.key === pref ? -1 : b.key === pref ? 1 : 0));
+      let best = cands[0], bestHits = 99;
+      for (const c of cands) {
+        const box = boxFrom(label, c.x, c.y, c.align, c.base);
+        let hits = 0;
+        for (const b of boxes) if (overlaps(box, b, 4)) hits += 3;
+        for (const b of iconBoxes) if (overlaps(box, b, 2)) hits += 1;
+        if (hits < bestHits) { bestHits = hits; best = c; if (hits === 0) break; }
+      }
+      boxes.push(boxFrom(label, best.x, best.y, best.align, best.base));
+      ctx.textAlign = best.align;
+      ctx.textBaseline = best.base;
       ctx.lineWidth = 4;
       ctx.strokeStyle = "rgba(8,16,36,0.85)";
       ctx.fillStyle = "#fff8e8";
-      const label = lm.name;
-      ctx.strokeText(label, px, py - tile * 0.58);
-      ctx.fillText(label, px, py - tile * 0.58);
+      ctx.strokeText(label, best.x, best.y);
+      ctx.fillText(label, best.x, best.y);
+    }
+  }
+
+  function drawHorseIcon(x, y, s) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = "#fff6d8";
+    ctx.strokeStyle = "rgba(8,16,36,0.85)";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.ellipse(0, s * 0.05, s * 0.55, s * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(s * 0.48, -s * 0.28, s * 0.22, s * 0.18, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillRect(-s * 0.4, s * 0.2, s * 0.12, s * 0.38);
+    ctx.fillRect(-s * 0.08, s * 0.2, s * 0.12, s * 0.38);
+    ctx.fillRect(s * 0.18, s * 0.2, s * 0.12, s * 0.38);
+    ctx.fillRect(s * 0.38, s * 0.2, s * 0.12, s * 0.38);
+    ctx.restore();
+  }
+
+  function drawAreaLabels() {
+    if (!level.areaLabels || !level.areaLabels.length) return;
+    const ox = -camX * tile, oy = -camY * tile;
+    const fontFamily = "'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Noto Sans CJK JP', sans-serif";
+    const fs = Math.max(20, Math.min(32, tile * 0.85));
+    ctx.font = "bold " + fs + "px " + fontFamily;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const lb of level.areaLabels) {
+      const px = ox + (lb.x + 0.5) * tile;
+      const py = oy + (lb.y + 0.5) * tile;
+      if (px < -tile * 6 || py < -tile * 5 || px > viewW + tile * 6 || py > viewH + tile * 5) continue;
+      const lines = lb.name === "はんしんけいばじょう" ? ["はんしん", "けいばじょう"] : [lb.name];
+      const lineH = fs * 1.05;
+      const totalH = lineH * lines.length;
+      if (lb.icon === "horse") {
+        drawHorseIcon(px, py - totalH * 0.5 - tile * 0.45, tile * 0.42);
+      }
+      const startY = py - (totalH - lineH) / 2 + (lb.icon === "horse" ? tile * 0.12 : 0);
+      ctx.lineWidth = Math.max(5, tile * 0.16);
+      ctx.strokeStyle = "rgba(8,20,12,0.8)";
+      ctx.fillStyle = "#fff8e0";
+      for (let i = 0; i < lines.length; i++) {
+        const y = startY + i * lineH;
+        ctx.strokeText(lines[i], px, y);
+        ctx.fillText(lines[i], px, y);
+      }
     }
   }
 
@@ -877,23 +1141,33 @@
     const r = tile * 0.42;
     const chomp = dying ? 0.15 : (0.15 + 0.35 * (0.5 + 0.5 * Math.sin(mouth * 14)));
     const face = player.face || player.dir || DIRS.right;
-    let ang = 0;
-    if (face === DIRS.right) ang = 0;
-    else if (face === DIRS.down) ang = Math.PI / 2;
-    else if (face === DIRS.left) ang = Math.PI;
-    else if (face === DIRS.up) ang = -Math.PI / 2;
     ctx.save();
     ctx.translate(px, py);
     if (dying) ctx.globalAlpha = Math.max(0, dieT);
+    // 左むきは回転せずよこに反転（目は上のまま）
+    if (face === DIRS.left) ctx.scale(-1, 1);
+    // 口だけ向きを変える。左右は +x、下は +y、上は -y。
+    let ang = 0;
+    if (face === DIRS.down) ang = Math.PI / 2;
+    else if (face === DIRS.up) ang = -Math.PI / 2;
     ctx.fillStyle = "#ffe14a";
     ctx.beginPath();
     ctx.arc(0, 0, r, ang + chomp, ang + Math.PI * 2 - chomp);
     ctx.lineTo(0, 0);
     ctx.closePath();
     ctx.fill();
-    // eye
-    const ex = Math.cos(ang - 0.9) * r * 0.45;
-    const ey = Math.sin(ang - 0.9) * r * 0.45;
+    // 目は常にスプライトの上側（左反転後も画面の上）
+    let ex, ey;
+    if (face === DIRS.up) {
+      ex = r * 0.32;
+      ey = -r * 0.28;
+    } else if (face === DIRS.down) {
+      ex = r * 0.2;
+      ey = -r * 0.42;
+    } else {
+      ex = r * 0.2;
+      ey = -r * 0.42;
+    }
     ctx.fillStyle = "#203060";
     ctx.beginPath();
     ctx.arc(ex, ey, r * 0.13, 0, Math.PI * 2);
@@ -970,6 +1244,14 @@
     ctx.fill();
     ctx.stroke();
     const sx = mw / level.w, sy = mh / level.h;
+    if (level.areaFillCells && level.areaFillCells.size) {
+      ctx.fillStyle = "#2b5d3a";
+      for (const key of level.areaFillCells.keys()) {
+        const parts = key.split(",");
+        const ax = +parts[0], ay = +parts[1];
+        ctx.fillRect(x0 + ax * sx, y0 + ay * sy, sx + 0.4, sy + 0.4);
+      }
+    }
     ctx.fillStyle = "#2c4c9a";
     for (let y = 0; y < level.h; y++) {
       for (let x = 0; x < level.w; x++) {
@@ -1036,6 +1318,7 @@
     }
     updateCamera();
     drawWalls();
+    drawAreaLabels();
     drawDots();
     drawLandmarks();
     for (const e of enemies) drawEnemy(e);
@@ -1211,6 +1494,13 @@
         camX: camX,
         camY: camY,
         tile: tile,
+        graceT: graceT,
+        enemies: enemies.map((en) => ({
+          id: en.id,
+          x: en.x,
+          y: en.y,
+          dir: en.dir && en.dir.name,
+        })),
       };
     },
     place(x, y) {
@@ -1224,11 +1514,26 @@
     setWant(name) { setWant(name, "key"); },
     clearWant() { wantDir = null; inputSource = null; },
     freezeCamera(on) { debugFreezeCam = !!on; },
+    snapCamera() {
+      if (!level || !player) return;
+      const saved = debugFreezeCam;
+      debugFreezeCam = false;
+      const vw = viewW / tile, vh = viewH / tile;
+      let cx = player.x + 0.5 - vw / 2;
+      let cy = player.y + 0.5 - vh / 2;
+      cx = Math.max(0, Math.min(level.w - vw, cx));
+      cy = Math.max(0, Math.min(level.h - vh, cy));
+      if (level.w * tile < viewW) cx = -(viewW - level.w * tile) / 2 / tile;
+      if (level.h * tile < viewH) cy = -(viewH - level.h * tile) / 2 / tile;
+      camX = cx;
+      camY = cy;
+      debugFreezeCam = saved;
+    },
     freezeEnemies(on) { debugFreezeEnemies = !!on; },
     invincible(on) { debugInvincible = !!on; },
-    isWalkable(x, y) {
+    isWalkable(x, y, who) {
       if (!level) return false;
-      return !isWallFor(level, Math.round(x), Math.round(y), "player");
+      return !isWallFor(level, Math.round(x), Math.round(y), who || "player");
     },
     canMove(x, y, name) {
       const d = DIRS[name];
@@ -1280,6 +1585,15 @@
       return best;
     },
     worldToScreen: worldToScreen,
+    setFace(name) {
+      if (!player || !DIRS[name]) return;
+      player.face = DIRS[name];
+      player.dir = null;
+      wantDir = null;
+    },
+    setMouth(t) { mouth = t; },
+    setDying(on, t) { dying = !!on; dieT = t == null ? 1 : t; },
+    redraw() { draw(); },
     step(seconds) {
       let left = seconds;
       const slice = 1 / 60;
@@ -1303,6 +1617,7 @@
               updateEnemies(dt);
               collide();
             }
+            if (!debugFreezeCam) updateCamera();
           }
         }
         left -= dt;

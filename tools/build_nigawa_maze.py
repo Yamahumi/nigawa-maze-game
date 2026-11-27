@@ -88,6 +88,106 @@ LANDMARKS = [
         "bonus": 700,
         "note": "最寄り店舗（鹿塩二丁目／中津浜線）",
     },
+    {
+        "id": "benten",
+        "name": "弁天池",
+        "lat": 34.7762975,
+        "lon": 135.3552237,
+        "osm": "way/110536806",
+        "kind": "pond",
+        "role": "bonus",
+        "bonus": 800,
+    },
+    {
+        "id": "coop",
+        "name": "コープ",
+        "lat": 34.7750356,
+        "lon": 135.3575555,
+        "osm": "node/5297344126",
+        "kind": "shop",
+        "role": "bonus",
+        "bonus": 600,
+        "note": "最寄り店舗（仁川北三丁目／桝塚線）",
+    },
+    {
+        "id": "ohsho",
+        "name": "大阪王将",
+        "lat": 34.7754185,
+        "lon": 135.3582794,
+        "osm": "way/724487679",
+        "kind": "restaurant",
+        "role": "bonus",
+        "bonus": 700,
+        "note": "最寄り店舗（仁川北二丁目／生瀬門戸荘線）",
+    },
+    {
+        "id": "school",
+        "name": "市立仁川小学校",
+        "lat": 34.7795864,
+        "lon": 135.3526471,
+        "osm": "way/104223606",
+        "kind": "school",
+        "role": "safe",
+        "bonus": 800,
+    },
+    {
+        "id": "hoshi",
+        "name": "ホシのびょういん",
+        "lat": 34.7758304,
+        "lon": 135.3573891,
+        "osm": "way/262505388",
+        "kind": "hospital",
+        "role": "safe",
+        "bonus": 800,
+        "note": "クリニック本体はOSMに未登録。星空こども・アレルギークリニックはさらら仁川北館（way/262505388）内（駅の北東、徒歩約30秒）。建物中心から最寄り道路へスナップ。",
+    },
+    {
+        "id": "dentist",
+        "name": "うえは歯科医院",
+        "lat": 34.7728138,
+        "lon": 135.3597848,
+        "osm": "node/10301968220",
+        "kind": "dentist",
+        "role": "bonus",
+        "bonus": 600,
+        "note": "駅の南にある唯一の amenity=dentist（南東へ約338m）。",
+    },
+    {
+        "id": "home",
+        "name": "いえ",
+        "lat": 34.7750859,
+        "lon": 135.3564287,
+        "osm": None,
+        "kind": "home",
+        "role": "safe",
+        "bonus": 500,
+        "placement": "user",
+        "note": "ユーザー指定：仁川駅の西でいちばん近い行き止まり道路マス。",
+    },
+    {
+        "id": "pannel",
+        "name": "パンネル",
+        "lat": 34.7802242,
+        "lon": 135.3525791,
+        "osm": None,
+        "kind": "bakery",
+        "role": "bonus",
+        "bonus": 600,
+        "placement": "user",
+        "note": "ユーザー指定：仁川小学校のすぐ西の道路。OSMのパンネル（node/7232155158, shop=bakery, 34.7783067,135.3526363）は小学校の約142m南で、すぐ西ではないため未使用。",
+    },
+    {
+        "id": "kumon",
+        "name": "くもん",
+        "lat": 34.7802242,
+        "lon": 135.3523385,
+        "osm": None,
+        "kind": "juku",
+        "role": "bonus",
+        "bonus": 500,
+        "placement": "user",
+        "note": "ユーザー指定：パンネルのさらに西の道路マス。OSMに近傍の公文は見つからず。",
+    },
 ]
 
 
@@ -123,11 +223,21 @@ def parse_ways(path: Path):
     return ways
 
 
+# The playable window is fixed by these map-defining landmarks plus padding.
+# Later pins already inside the window must not grow it another 280m.
+EXTENT_IDS = {
+    "station", "nursery", "mandai", "racecourse", "mcdonalds",
+    "benten", "coop", "ohsho", "school",
+}
+
+
 def landmark_bounds_m(cell_m: float):
-    """Playable window: landmark bbox plus ~280m padding (not the full length of roads)."""
+    """Playable window: extent-landmark bbox plus ~280m padding (not the full length of roads)."""
     m_lat, m_lon = meters_per_deg(STATION_WIKI[0])
     xs, ys = [], []
     for lm in LANDMARKS:
+        if lm["id"] not in EXTENT_IDS:
+            continue
         x = (lm["lon"] - STATION_WIKI[1]) * m_lon
         y = (STATION_WIKI[0] - lm["lat"]) * m_lat
         xs.append(x)
@@ -499,6 +609,211 @@ def farthest_cells(grid, start, k=4):
     return picks, len(dist)
 
 
+def latlon_to_cell_origin(lat, lon, origin):
+    x = (lon - origin["lon0"]) * origin["m_lon"]
+    y = (origin["lat0"] - lat) * origin["m_lat"]
+    c = int((x - origin["minx"]) / origin["cell_m"])
+    r = int((y - origin["miny"]) / origin["cell_m"])
+    return c, r
+
+
+def cells_in_poly(cell_pts, width, height):
+    if len(cell_pts) < 3:
+        return []
+    xs = [p[0] for p in cell_pts]
+    ys = [p[1] for p in cell_pts]
+    minx, maxx = int(math.floor(min(xs))), int(math.ceil(max(xs)))
+    miny, maxy = int(math.floor(min(ys))), int(math.ceil(max(ys)))
+    minx, miny = max(0, minx), max(0, miny)
+    maxx, maxy = min(width - 1, maxx), min(height - 1, maxy)
+    out = []
+    n = len(cell_pts)
+    for y in range(miny, maxy + 1):
+        for x in range(minx, maxx + 1):
+            cx, cy = x + 0.5, y + 0.5
+            inside = False
+            j = n - 1
+            for i in range(n):
+                xi, yi = cell_pts[i]
+                xj, yj = cell_pts[j]
+                if ((yi > cy) != (yj > cy)) and (cx < (xj - xi) * (cy - yi) / (yj - yi + 1e-15) + xi):
+                    inside = not inside
+                j = i
+            if inside:
+                out.append((x, y))
+    return out
+
+
+def stitch_rings(parts):
+    leftover = [list(p) for p in parts]
+    rings = []
+    while leftover:
+        ring = leftover.pop()
+        changed = True
+        while changed and leftover:
+            changed = False
+            for i, part in enumerate(leftover):
+                if ring[-1] == part[0]:
+                    ring += part[1:]
+                    leftover.pop(i)
+                    changed = True
+                    break
+                if ring[-1] == part[-1]:
+                    ring += list(reversed(part[:-1]))
+                    leftover.pop(i)
+                    changed = True
+                    break
+                if ring[0] == part[-1]:
+                    ring = part + ring[1:]
+                    leftover.pop(i)
+                    changed = True
+                    break
+                if ring[0] == part[0]:
+                    ring = list(reversed(part)) + ring[1:]
+                    leftover.pop(i)
+                    changed = True
+                    break
+        rings.append(ring)
+    return rings
+
+
+def build_area_labels(osm_path, grid, origin):
+    """Rasterize large named OSM areas (racecourse) for on-block labels."""
+    width, height = len(grid[0]), len(grid)
+    tree = ET.parse(osm_path)
+    root = tree.getroot()
+    nodes = {}
+    for el in root:
+        if el.tag == "node":
+            nodes[el.get("id")] = (float(el.get("lat")), float(el.get("lon")))
+    ways = {}
+    for el in root:
+        if el.tag != "way":
+            continue
+        nds = [nd.get("ref") for nd in el if nd.tag == "nd"]
+        pts = [nodes[i] for i in nds if i in nodes]
+        ways[el.get("id")] = pts
+
+    # 阪神競馬場 relation/21889276
+    rel = None
+    for el in root:
+        if el.tag == "relation" and el.get("id") == "21889276":
+            rel = el
+            break
+    if rel is None:
+        print("WARN: racecourse relation/21889276 not in OSM extract")
+        return [], []
+
+    outers, inners = [], []
+    for m in rel:
+        if m.tag != "member" or m.get("type") != "way":
+            continue
+        pts = ways.get(m.get("ref"))
+        if not pts:
+            continue
+        (inners if m.get("role") == "inner" else outers).append(pts)
+
+    def to_cells(pts):
+        return [latlon_to_cell_origin(lat, lon, origin) for lat, lon in pts]
+
+    cells = set()
+    for ring in stitch_rings(outers):
+        cells.update(cells_in_poly(to_cells(ring), width, height))
+    for ring in stitch_rings(inners):
+        cells.difference_update(cells_in_poly(to_cells(ring), width, height))
+
+    # only solid wall cells (the no-entry block)
+    wall_cells = [(x, y) for x, y in cells if 0 <= y < height and 0 <= x < width and grid[y][x] == 1]
+    print(f"racecourse area: polygon={len(cells)} wall={len(wall_cells)}")
+    if not wall_cells:
+        return [], []
+
+    # distance to nearest corridor, for interior label placement
+    from collections import deque
+    inf = 99
+    dist = [[inf] * width for _ in range(height)]
+    q = deque()
+    wallset = set(wall_cells)
+    for y in range(height):
+        for x in range(width):
+            if grid[y][x] != 1:
+                dist[y][x] = 0
+                q.append((x, y))
+    while q:
+        x, y = q.popleft()
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < width and 0 <= ny < height and dist[ny][nx] == inf:
+                dist[ny][nx] = dist[y][x] + 1
+                q.append((nx, ny))
+
+    # horizontal runs for compact fill
+    by_row = {}
+    for x, y in wall_cells:
+        by_row.setdefault(y, []).append(x)
+    runs = []
+    for y in sorted(by_row):
+        xs = sorted(by_row[y])
+        start = prev = xs[0]
+        for x in xs[1:]:
+            if x == prev + 1:
+                prev = x
+                continue
+            runs.append([y, start, prev])
+            start = prev = x
+        runs.append([y, start, prev])
+
+    # repeat labels across the interior so a follow-camera always sees one
+    labels = []
+    used = []
+    # sort interior-first
+    interiors = [(dist[y][x], x, y) for x, y in wall_cells if dist[y][x] >= 3]
+    interiors.sort(key=lambda t: (-t[0], t[2], t[1]))
+    # seed a coarse grid
+    if interiors:
+        xs = [x for _, x, _ in interiors]
+        ys = [y for _, _, y in interiors]
+        for y in range(min(ys), max(ys) + 1, 8):
+            for x in range(min(xs), max(xs) + 1, 10):
+                # pick nearest interior cell with enough spacing
+                best = None
+                best_d = 1e9
+                for d, cx, cy in interiors:
+                    md = abs(cx - x) + abs(cy - y)
+                    if md < best_d:
+                        best_d = md
+                        best = (cx, cy, d)
+                if best is None or best_d > 6:
+                    continue
+                cx, cy, d = best
+                if any(abs(cx - ux) + abs(cy - uy) < 8 for ux, uy in used):
+                    continue
+                if d < 3:
+                    continue
+                used.append((cx, cy))
+                labels.append({
+                    "id": "racecourse-area",
+                    "name": "はんしんけいばじょう",
+                    "kind": "racecourse",
+                    "icon": "horse",
+                    "x": cx,
+                    "y": cy,
+                })
+    print(f"racecourse area labels: {len(labels)} at {[(lm['x'], lm['y']) for lm in labels]}")
+
+    fills = [{
+        "id": "racecourse-area",
+        "name": "はんしんけいばじょう",
+        "osm": "relation/21889276",
+        "kind": "racecourse",
+        "color": "#2b5d3a",
+        "edge": "#8fd4a0",
+        "runs": runs,
+    }]
+    return fills, labels
+
+
+
 def main():
     print("parsing", OSM_PATH)
     ways = parse_ways(OSM_PATH)
@@ -631,7 +946,7 @@ def main():
     # ASCII preview (downsampled)
     print("\n--- preview ---")
     marks = {}
-    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K"}
+    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U"}
     for lm in LANDMARKS:
         marks[tuple(lm["cell"])] = letters[lm["id"]]
     for x, y in pellets:
@@ -648,6 +963,17 @@ def main():
             else:
                 row.append(".")
         print("".join(row))
+
+    origin_out = {
+        "lat0": origin["lat0"],
+        "lon0": origin["lon0"],
+        "minx": origin["minx"] + ox * CELL_M,
+        "miny": origin["miny"] + oy * CELL_M,
+        "m_lat": origin["m_lat"],
+        "m_lon": origin["m_lon"],
+        "cell_m": CELL_M,
+    }
+    area_fills, area_labels = build_area_labels(OSM_PATH, cropped, origin_out)
 
     data = {
         "name": "にがわステージ",
@@ -670,6 +996,8 @@ def main():
             "minx": origin["minx"] + ox * CELL_M,
             "miny": origin["miny"] + oy * CELL_M,
         },
+        "areaFills": area_fills,
+        "areaLabels": area_labels,
     }
     OUT_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     print("wrote", OUT_PATH, "bytes", OUT_PATH.stat().st_size)

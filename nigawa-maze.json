@@ -172,6 +172,196 @@
       ],
       "snap_cells": 1,
       "snap_meters": 22.0
+    },
+    {
+      "id": "benten",
+      "name": "弁天池",
+      "lat": 34.7762975,
+      "lon": 135.3552237,
+      "osm": "way/110536806",
+      "kind": "pond",
+      "role": "bonus",
+      "bonus": 800,
+      "raw_cell": [
+        30,
+        38
+      ],
+      "cell": [
+        30,
+        42
+      ],
+      "snap_cells": 4,
+      "snap_meters": 88.0
+    },
+    {
+      "id": "coop",
+      "name": "コープ",
+      "lat": 34.7750356,
+      "lon": 135.3575555,
+      "osm": "node/5297344126",
+      "kind": "shop",
+      "role": "bonus",
+      "bonus": 600,
+      "note": "最寄り店舗（仁川北三丁目／桝塚線）",
+      "raw_cell": [
+        40,
+        44
+      ],
+      "cell": [
+        40,
+        43
+      ],
+      "snap_cells": 1,
+      "snap_meters": 22.0
+    },
+    {
+      "id": "ohsho",
+      "name": "大阪王将",
+      "lat": 34.7754185,
+      "lon": 135.3582794,
+      "osm": "way/724487679",
+      "kind": "restaurant",
+      "role": "bonus",
+      "bonus": 700,
+      "note": "最寄り店舗（仁川北二丁目／生瀬門戸荘線）",
+      "raw_cell": [
+        43,
+        42
+      ],
+      "cell": [
+        43,
+        41
+      ],
+      "snap_cells": 1,
+      "snap_meters": 22.0
+    },
+    {
+      "id": "school",
+      "name": "市立仁川小学校",
+      "lat": 34.7795864,
+      "lon": 135.3526471,
+      "osm": "way/104223606",
+      "kind": "school",
+      "role": "safe",
+      "bonus": 800,
+      "raw_cell": [
+        19,
+        21
+      ],
+      "cell": [
+        20,
+        20
+      ],
+      "snap_cells": 2,
+      "snap_meters": 44.0
+    },
+    {
+      "id": "hoshi",
+      "name": "ホシのびょういん",
+      "lat": 34.7758304,
+      "lon": 135.3573891,
+      "osm": "way/262505388",
+      "kind": "hospital",
+      "role": "safe",
+      "bonus": 800,
+      "note": "クリニック本体はOSMに未登録。星空こども・アレルギークリニックはさらら仁川北館（way/262505388）内（駅の北東、徒歩約30秒）。建物中心から最寄り道路へスナップ。",
+      "raw_cell": [
+        39,
+        40
+      ],
+      "cell": [
+        39,
+        39
+      ],
+      "snap_cells": 1,
+      "snap_meters": 22.0
+    },
+    {
+      "id": "dentist",
+      "name": "うえは歯科医院",
+      "lat": 34.7728138,
+      "lon": 135.3597848,
+      "osm": "node/10301968220",
+      "kind": "dentist",
+      "role": "bonus",
+      "bonus": 600,
+      "note": "駅の南にある唯一の amenity=dentist（南東へ約338m）。",
+      "raw_cell": [
+        49,
+        55
+      ],
+      "cell": [
+        49,
+        55
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
+    },
+    {
+      "id": "home",
+      "name": "いえ",
+      "lat": 34.7750859,
+      "lon": 135.3564287,
+      "osm": null,
+      "kind": "home",
+      "role": "safe",
+      "bonus": 500,
+      "placement": "user",
+      "note": "ユーザー指定：仁川駅の西でいちばん近い行き止まり道路マス。",
+      "raw_cell": [
+        35,
+        44
+      ],
+      "cell": [
+        35,
+        44
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
+    },
+    {
+      "id": "pannel",
+      "name": "パンネル",
+      "lat": 34.7802242,
+      "lon": 135.3525791,
+      "osm": null,
+      "kind": "bakery",
+      "role": "bonus",
+      "bonus": 600,
+      "placement": "user",
+      "note": "ユーザー指定：仁川小学校のすぐ西の道路。OSMのパンネル（node/7232155158, shop=bakery, 34.7783067,135.3526363）は小学校の約142m南で、すぐ西ではないため未使用。",
+      "raw_cell": [
+        19,
+        18
+      ],
+      "cell": [
+        19,
+        18
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
+    },
+    {
+      "id": "kumon",
+      "name": "くもん",
+      "lat": 34.7802242,
+      "lon": 135.3523385,
+      "osm": null,
+      "kind": "juku",
+      "role": "bonus",
+      "bonus": 500,
+      "placement": "user",
+      "note": "ユーザー指定：パンネルのさらに西の道路マス。OSMに近傍の公文は見つからず。",
+      "raw_cell": [
+        18,
+        18
+      ],
+      "cell": [
+        18,
+        18
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
     }
   ],
   "playerStart": [
@@ -921,10 +1111,6 @@
       17
     ],
     [
-      18,
-      18
-    ],
-    [
       21,
       18
     ],
@@ -1381,10 +1567,6 @@
       39
     ],
     [
-      39,
-      39
-    ],
-    [
       42,
       39
     ],
@@ -1461,10 +1643,6 @@
       41
     ],
     [
-      43,
-      41
-    ],
-    [
       61,
       41
     ],
@@ -1487,10 +1665,6 @@
     [
       76,
       41
-    ],
-    [
-      30,
-      42
     ],
     [
       42,
@@ -2226,5 +2400,329 @@
     "lon0": 135.3569806,
     "minx": -831.4612361889997,
     "miny": -961.9685840004663
-  }
+  },
+  "areaFills": [
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "osm": "relation/21889276",
+      "kind": "racecourse",
+      "color": "#2b5d3a",
+      "edge": "#8fd4a0",
+      "runs": [
+        [
+          2,
+          80,
+          82
+        ],
+        [
+          3,
+          80,
+          82
+        ],
+        [
+          4,
+          69,
+          71
+        ],
+        [
+          4,
+          75,
+          83
+        ],
+        [
+          5,
+          59,
+          83
+        ],
+        [
+          6,
+          45,
+          83
+        ],
+        [
+          7,
+          42,
+          83
+        ],
+        [
+          8,
+          42,
+          84
+        ],
+        [
+          9,
+          42,
+          84
+        ],
+        [
+          10,
+          42,
+          84
+        ],
+        [
+          11,
+          42,
+          85
+        ],
+        [
+          12,
+          42,
+          85
+        ],
+        [
+          13,
+          42,
+          85
+        ],
+        [
+          14,
+          42,
+          86
+        ],
+        [
+          15,
+          42,
+          86
+        ],
+        [
+          16,
+          42,
+          86
+        ],
+        [
+          17,
+          42,
+          87
+        ],
+        [
+          18,
+          42,
+          87
+        ],
+        [
+          19,
+          42,
+          87
+        ],
+        [
+          20,
+          42,
+          88
+        ],
+        [
+          21,
+          42,
+          88
+        ],
+        [
+          22,
+          42,
+          88
+        ],
+        [
+          23,
+          42,
+          85
+        ],
+        [
+          24,
+          42,
+          80
+        ],
+        [
+          25,
+          42,
+          79
+        ],
+        [
+          26,
+          42,
+          77
+        ],
+        [
+          27,
+          42,
+          77
+        ],
+        [
+          28,
+          42,
+          78
+        ],
+        [
+          29,
+          41,
+          78
+        ],
+        [
+          30,
+          41,
+          78
+        ],
+        [
+          31,
+          50,
+          78
+        ],
+        [
+          32,
+          42,
+          52
+        ],
+        [
+          32,
+          55,
+          78
+        ],
+        [
+          33,
+          42,
+          55
+        ],
+        [
+          33,
+          57,
+          78
+        ],
+        [
+          34,
+          42,
+          47
+        ],
+        [
+          34,
+          49,
+          67
+        ],
+        [
+          34,
+          76,
+          78
+        ]
+      ]
+    }
+  ],
+  "areaLabels": [
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 44,
+      "y": 8
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 54,
+      "y": 8
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 64,
+      "y": 7
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 74,
+      "y": 6
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 82,
+      "y": 2
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 84,
+      "y": 10
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 44,
+      "y": 18
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 54,
+      "y": 18
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 64,
+      "y": 18
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 74,
+      "y": 18
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 84,
+      "y": 18
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 44,
+      "y": 26
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 54,
+      "y": 26
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 64,
+      "y": 26
+    },
+    {
+      "id": "racecourse-area",
+      "name": "はんしんけいばじょう",
+      "kind": "racecourse",
+      "icon": "horse",
+      "x": 74,
+      "y": 26
+    }
+  ]
 }
