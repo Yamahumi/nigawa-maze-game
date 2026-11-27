@@ -188,6 +188,18 @@ LANDMARKS = [
         "placement": "user",
         "note": "ユーザー指定：パンネルのさらに西の道路マス。OSMに近傍の公文は見つからず。",
     },
+    {
+        "id": "kumano",
+        "name": "くまのじんじゃ",
+        "lat": 34.7756788,
+        "lon": 135.3554663,
+        "osm": None,
+        "kind": "shrine",
+        "role": "bonus",
+        "bonus": 700,
+        "placement": "user",
+        "note": "ユーザー指定：べんてんいけのすぐ北の道路マス（31,41）。近傍にOSMの熊野神社はなし。",
+    },
 ]
 
 
@@ -946,7 +958,7 @@ def main():
     # ASCII preview (downsampled)
     print("\n--- preview ---")
     marks = {}
-    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U"}
+    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J"}
     for lm in LANDMARKS:
         marks[tuple(lm["cell"])] = letters[lm["id"]]
     for x, y in pellets:

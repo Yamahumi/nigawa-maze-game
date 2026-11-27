@@ -56,6 +56,7 @@
     home: "いえ",
     pannel: "パンネル",
     kumon: "くもん",
+    kumano: "くまのじんじゃ",
   };
 
   const ENEMY_META = [
@@ -1001,6 +1002,16 @@
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("く", 0, r * 0.12);
+      } else if (lm.kind === "shrine") {
+        // とりい
+        ctx.fillStyle = lm.visited ? "#ffb0a0" : "#e24a3a";
+        const tw = r * 0.28;
+        ctx.fillRect(-r * 0.62, -r * 0.15, tw, r * 0.95);
+        ctx.fillRect(r * 0.62 - tw, -r * 0.15, tw, r * 0.95);
+        ctx.fillRect(-r * 0.85, -r * 0.55, r * 1.7, r * 0.22);
+        ctx.fillRect(-r * 0.72, -r * 0.18, r * 1.44, r * 0.14);
+        ctx.fillStyle = lm.visited ? "#5a2a20" : "#3a1810";
+        ctx.fillRect(-r * 0.88, -r * 0.62, r * 1.76, r * 0.08);
       } else {
         ctx.fillStyle = lm.visited ? "#ffd9a0" : "#ff9f4a";
         ctx.beginPath();
@@ -1015,7 +1026,7 @@
     const fs = Math.max(15, Math.min(22, tile * 0.62));
     ctx.font = "bold " + fs + "px " + fontFamily;
     const boxes = [];
-    const prefer = { home: "left", kumon: "left", pannel: "up", school: "down", station: "down", hoshi: "up", dentist: "down" };
+    const prefer = { home: "left", kumon: "left", pannel: "up", school: "down", station: "down", hoshi: "up", dentist: "down", benten: "down", kumano: "up" };
     function boxFrom(text, x, y, align, base) {
       const w = ctx.measureText(text).width;
       const h = fs + 5;

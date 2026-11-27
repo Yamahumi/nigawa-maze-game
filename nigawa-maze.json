@@ -362,6 +362,28 @@
       ],
       "snap_cells": 0,
       "snap_meters": 0.0
+    },
+    {
+      "id": "kumano",
+      "name": "くまのじんじゃ",
+      "lat": 34.7756788,
+      "lon": 135.3554663,
+      "osm": null,
+      "kind": "shrine",
+      "role": "bonus",
+      "bonus": 700,
+      "placement": "user",
+      "note": "ユーザー指定：べんてんいけのすぐ北の道路マス（31,41）。近傍にOSMの熊野神社はなし。",
+      "raw_cell": [
+        31,
+        41
+      ],
+      "cell": [
+        31,
+        41
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
     }
   ],
   "playerStart": [
@@ -1625,10 +1647,6 @@
     [
       77,
       40
-    ],
-    [
-      31,
-      41
     ],
     [
       34,
