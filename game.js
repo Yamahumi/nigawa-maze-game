@@ -272,10 +272,11 @@
     player = {
       x: level.start.x,
       y: level.start.y,
-      dir: DIRS.left,
+      dir: null,
+      face: DIRS.right,
       stuck: false,
     };
-    wantDir = DIRS.left;
+    wantDir = null;
     enemies = ENEMY_META.map((meta, i) => {
       const spawn = level.enemyStarts[i] || level.enemyStarts[0] || level.start;
       const corner = {
@@ -418,21 +419,87 @@
     return "moved";
   }
 
-  function updatePlayer(dt) {
-    if (dying) return;
-    // reverse immediately
-    if (wantDir && player.dir && wantDir.x === -player.dir.x && wantDir.y === -player.dir.y) {
-      player.dir = wantDir;
-    }
-    if (nearCenter(player, 0.22) && wantDir && openAhead(player, wantDir, "player")) {
+  function settleToCenter(dt) {
+    if (nearCenter(player, 0.15)) {
       snapCenter(player);
-      player.dir = wantDir;
+      player.dir = null;
+      return;
+    }
+    if (!player.dir) {
+      const cx = Math.round(player.x), cy = Math.round(player.y);
+      const dx = cx - player.x, dy = cy - player.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const step = Math.min(dist, PLAYER_SPEED * dt);
+      player.x += (dx / dist) * step;
+      player.y += (dy / dist) * step;
+      if (nearCenter(player, 0.15)) {
+        snapCenter(player);
+        player.dir = null;
+      }
+      return;
     }
     const r = moveActor(player, player.dir, PLAYER_SPEED, dt, "player");
-    if (r === "blocked") {
-      // stay put; if wantDir is open, turn
-      if (wantDir && openAhead(player, wantDir, "player")) player.dir = wantDir;
+    if (r === "blocked" || nearCenter(player, 0.15)) {
+      snapCenter(player);
+      player.dir = null;
     }
+  }
+
+  // おしたほうこうにだけすすむ（こどものそうさ：ちがうほうこうへすべらない）
+  // 直進中はマス中心にスナップし直さない（毎フレーム引き戻されて動けなくなるのを防ぐ）
+  function updatePlayer(dt) {
+    if (dying) return;
+    if (wantDir) player.face = wantDir;
+
+    // reverse immediately when the opposite way is requested
+    if (wantDir && player.dir && wantDir.x === -player.dir.x && wantDir.y === -player.dir.y) {
+      player.dir = wantDir;
+      player.face = wantDir;
+    }
+
+    const goingWanted = !!(wantDir && player.dir && player.dir.x === wantDir.x && player.dir.y === wantDir.y);
+
+    if (!wantDir) {
+      settleToCenter(dt);
+    } else if (goingWanted) {
+      const r = moveActor(player, player.dir, PLAYER_SPEED, dt, "player");
+      if (r === "blocked") {
+        snapCenter(player);
+        player.dir = null;
+      }
+    } else if (nearCenter(player, 0.2)) {
+      snapCenter(player);
+      if (openAhead(player, wantDir, "player")) {
+        player.dir = wantDir;
+        player.face = wantDir;
+        const r = moveActor(player, player.dir, PLAYER_SPEED, dt, "player");
+        if (r === "blocked") {
+          snapCenter(player);
+          player.dir = null;
+        }
+      } else {
+        // 壁なら止まる。バッファは残し、空きができたらすぐ曲がる。
+        // 別方向へ走り続けない（5歳児にわかりやすく）。
+        player.dir = null;
+        player.face = wantDir;
+      }
+    } else if (player.dir) {
+      // 横方向キー：次のマス中心までだけ進み、そこで曲げるか止まる
+      const r = moveActor(player, player.dir, PLAYER_SPEED, dt, "player");
+      if (r === "blocked" || nearCenter(player, 0.2)) {
+        snapCenter(player);
+        if (openAhead(player, wantDir, "player")) {
+          player.dir = wantDir;
+          player.face = wantDir;
+        } else {
+          player.dir = null;
+          player.face = wantDir;
+        }
+      }
+    } else {
+      settleToCenter(dt);
+    }
+
     if (level.wrap) {
       if (player.x < -0.5) player.x += level.w;
       if (player.x >= level.w - 0.5) player.x -= level.w;
@@ -530,6 +597,7 @@
   }
 
   function updateEnemies(dt) {
+    if (debugFreezeEnemies) return;
     const scatterCycle = !powerT && graceT <= 0 && (Math.floor((performance.now() / 1000) % 16) < 4);
     for (const e of enemies) {
       const who = e.eaten ? "eyes" : "enemy";
@@ -576,7 +644,7 @@
   }
 
   function collide() {
-    if (dying || mode !== "play") return;
+    if (debugInvincible || dying || mode !== "play") return;
     const hitR = 0.42; // すこし やさしめ
     for (const e of enemies) {
       if (e.eaten) continue;
@@ -808,11 +876,12 @@
     const py = oy + (player.y + 0.5) * tile;
     const r = tile * 0.42;
     const chomp = dying ? 0.15 : (0.15 + 0.35 * (0.5 + 0.5 * Math.sin(mouth * 14)));
+    const face = player.face || player.dir || DIRS.right;
     let ang = 0;
-    if (player.dir === DIRS.right) ang = 0;
-    else if (player.dir === DIRS.down) ang = Math.PI / 2;
-    else if (player.dir === DIRS.left) ang = Math.PI;
-    else if (player.dir === DIRS.up) ang = -Math.PI / 2;
+    if (face === DIRS.right) ang = 0;
+    else if (face === DIRS.down) ang = Math.PI / 2;
+    else if (face === DIRS.left) ang = Math.PI;
+    else if (face === DIRS.up) ang = -Math.PI / 2;
     ctx.save();
     ctx.translate(px, py);
     if (dying) ctx.globalAlpha = Math.max(0, dieT);
@@ -926,8 +995,17 @@
     ctx.restore();
   }
 
+  function worldToScreen(x, y) {
+    return { x: (x + 0.5 - camX) * tile, y: (y + 0.5 - camY) * tile };
+  }
+
+  let debugFreezeCam = false;
+  let debugFreezeEnemies = false;
+  let debugInvincible = false;
+
   function updateCamera() {
     if (!level) return;
+    if (debugFreezeCam) return;
     if (level.fitAll) {
       const mazeW = level.w * tile, mazeH = level.h * tile;
       camX = -(viewW - mazeW) / 2 / tile;
@@ -997,18 +1075,49 @@
   }
 
   // ------- input -------
-  function setWant(name) {
-    if (DIRS[name]) wantDir = DIRS[name];
+  const KEY_MAP = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", a: "left", d: "right", w: "up", s: "down" };
+  const heldKeys = new Set();
+  let inputSource = null; // "key" | "pad" | "swipe"
+
+  function setWant(name, source) {
+    if (!DIRS[name]) return;
+    wantDir = DIRS[name];
+    if (player) player.face = wantDir;
+    if (source) inputSource = source;
+  }
+
+  function releaseHeldMove(source) {
+    if (source === "key" && heldKeys.size) {
+      const last = [...heldKeys][heldKeys.size - 1];
+      setWant(last, "key");
+      return;
+    }
+    if (source === "pad" && heldPads.size) {
+      const last = [...heldPads][heldPads.size - 1];
+      setWant(last, "pad");
+      return;
+    }
+    if (inputSource === source) {
+      wantDir = null;
+      inputSource = null;
+    }
   }
 
   window.addEventListener("keydown", (e) => {
-    const map = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", a: "left", d: "right", w: "up", s: "down" };
-    if (map[e.key] || map[e.key.toLowerCase()]) {
-      e.preventDefault();
-      unlockAudio();
-      setWant(map[e.key] || map[e.key.toLowerCase()]);
-    }
+    const name = KEY_MAP[e.key] || KEY_MAP[e.key.toLowerCase()];
+    if (!name) return;
+    e.preventDefault();
+    unlockAudio();
+    heldKeys.add(name);
+    setWant(name, "key");
   }, { passive: false });
+
+  window.addEventListener("keyup", (e) => {
+    const name = KEY_MAP[e.key] || KEY_MAP[e.key.toLowerCase()];
+    if (!name) return;
+    heldKeys.delete(name);
+    releaseHeldMove("key");
+  });
 
   el.dpad.addEventListener("pointerdown", (e) => {
     const btn = e.target.closest("[data-dir]");
@@ -1018,13 +1127,15 @@
     const dir = btn.getAttribute("data-dir");
     heldPads.add(dir);
     btn.classList.add("held");
-    setWant(dir);
+    setWant(dir, "pad");
   });
   function clearPad(e) {
     const btn = e.target.closest ? e.target.closest("[data-dir]") : null;
     if (btn) {
-      heldPads.delete(btn.getAttribute("data-dir"));
+      const dir = btn.getAttribute("data-dir");
+      heldPads.delete(dir);
       btn.classList.remove("held");
+      releaseHeldMove("pad");
     }
   }
   el.dpad.addEventListener("pointerup", clearPad);
@@ -1045,8 +1156,8 @@
     const dx = t.clientX - swipeX;
     const dy = t.clientY - swipeY;
     if (Math.abs(dx) < 22 && Math.abs(dy) < 22) return;
-    if (Math.abs(dx) > Math.abs(dy)) setWant(dx > 0 ? "right" : "left");
-    else setWant(dy > 0 ? "down" : "up");
+    if (Math.abs(dx) > Math.abs(dy)) setWant(dx > 0 ? "right" : "left", "swipe");
+    else setWant(dy > 0 ? "down" : "up", "swipe");
     swipeX = t.clientX;
     swipeY = t.clientY;
   }
@@ -1082,6 +1193,123 @@
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
+
+  window.__mazeDebug = {
+    getState() {
+      if (!player || !level) return null;
+      const scr = worldToScreen(player.x, player.y);
+      return {
+        mode: mode,
+        stageId: stageId,
+        x: player.x,
+        y: player.y,
+        dir: player.dir && player.dir.name,
+        face: player.face && player.face.name,
+        want: wantDir && wantDir.name,
+        screenX: scr.x,
+        screenY: scr.y,
+        camX: camX,
+        camY: camY,
+        tile: tile,
+      };
+    },
+    place(x, y) {
+      if (!player) return;
+      player.x = x;
+      player.y = y;
+      player.dir = null;
+      wantDir = null;
+      inputSource = null;
+    },
+    setWant(name) { setWant(name, "key"); },
+    clearWant() { wantDir = null; inputSource = null; },
+    freezeCamera(on) { debugFreezeCam = !!on; },
+    freezeEnemies(on) { debugFreezeEnemies = !!on; },
+    invincible(on) { debugInvincible = !!on; },
+    isWalkable(x, y) {
+      if (!level) return false;
+      return !isWallFor(level, Math.round(x), Math.round(y), "player");
+    },
+    canMove(x, y, name) {
+      const d = DIRS[name];
+      if (!d || !level) return false;
+      return !isWallFor(level, Math.round(x) + d.x, Math.round(y) + d.y, "player");
+    },
+    findCell(name, run) {
+      const d = DIRS[name];
+      if (!d || !level) return null;
+      const need = run == null ? 2 : run;
+      const sx = Math.round(level.start.x), sy = Math.round(level.start.y);
+      let best = null, bestD = 1e9;
+      for (let y = 0; y < level.h; y++) {
+        for (let x = 0; x < level.w; x++) {
+          if (isWallFor(level, x, y, "player")) continue;
+          let ok = true;
+          for (let i = 1; i <= need; i++) {
+            if (isWallFor(level, x + d.x * i, y + d.y * i, "player")) { ok = false; break; }
+          }
+          if (!ok) continue;
+          const dist = Math.abs(x - sx) + Math.abs(y - sy);
+          if (dist < bestD) {
+            bestD = dist;
+            best = { x: x, y: y };
+          }
+        }
+      }
+      return best;
+    },
+    findTurn(along, turn) {
+      const a = DIRS[along], t = DIRS[turn];
+      if (!a || !t || !level) return null;
+      const sx = Math.round(level.start.x), sy = Math.round(level.start.y);
+      let best = null, bestD = 1e9;
+      for (let y = 0; y < level.h; y++) {
+        for (let x = 0; x < level.w; x++) {
+          if (isWallFor(level, x, y, "player")) continue;
+          if (isWallFor(level, x + a.x, y + a.y, "player")) continue;
+          // along is open on this cell, turn is blocked here, but open on the next along cell
+          if (!isWallFor(level, x + t.x, y + t.y, "player")) continue;
+          if (isWallFor(level, x + a.x + t.x, y + a.y + t.y, "player")) continue;
+          const dist = Math.abs(x - sx) + Math.abs(y - sy);
+          if (dist < bestD) {
+            bestD = dist;
+            best = { x: x, y: y };
+          }
+        }
+      }
+      return best;
+    },
+    worldToScreen: worldToScreen,
+    step(seconds) {
+      let left = seconds;
+      const slice = 1 / 60;
+      while (left > 0.0001) {
+        const dt = Math.min(slice, left);
+        if (msgT > 0) {
+          msgT -= dt;
+          if (msgT <= 0 && el.message) el.message.textContent = "";
+        }
+        if (mode === "play" && level) {
+          if (dying) {
+            afterDeath(dt);
+          } else {
+            if (graceT > 0) graceT -= dt;
+            if (powerT > 0) {
+              powerT -= dt;
+              if (powerT <= 0) eatStreak = 0;
+            }
+            updatePlayer(dt);
+            if (mode === "play") {
+              updateEnemies(dt);
+              collide();
+            }
+          }
+        }
+        left -= dt;
+      }
+      draw();
+    },
+  };
 
   function boot() {
     layout();
