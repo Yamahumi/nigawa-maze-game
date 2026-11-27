@@ -56,6 +56,7 @@
     home: "いえ",
     pannel: "パンネル",
     kumon: "くもん",
+    lawson: "ローソン",
     kumano: "くまのじんじゃ",
   };
 
@@ -1002,6 +1003,15 @@
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("く", 0, r * 0.12);
+      } else if (lm.kind === "convenience") {
+        ctx.fillStyle = lm.visited ? "#9ad0ff" : "#1a6ad6";
+        ctx.beginPath();
+        rounded(-r * 0.85, -r * 0.7, r * 1.7, r * 1.4, 4);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(-r * 0.85, -r * 0.22, r * 1.7, r * 0.28);
+        ctx.fillStyle = lm.visited ? "#c8ecff" : "#7ec8ff";
+        ctx.fillRect(-r * 0.45, r * 0.18, r * 0.9, r * 0.42);
       } else if (lm.kind === "shrine") {
         // とりい
         ctx.fillStyle = lm.visited ? "#ffb0a0" : "#e24a3a";
@@ -1026,7 +1036,7 @@
     const fs = Math.max(15, Math.min(22, tile * 0.62));
     ctx.font = "bold " + fs + "px " + fontFamily;
     const boxes = [];
-    const prefer = { home: "left", kumon: "left", pannel: "up", school: "down", station: "down", hoshi: "up", dentist: "down", benten: "down", kumano: "up" };
+    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", station: "down", hoshi: "up", dentist: "down", benten: "down", kumano: "up" };
     function boxFrom(text, x, y, align, base) {
       const w = ctx.measureText(text).width;
       const h = fs + 5;

@@ -123,12 +123,14 @@ LANDMARKS = [
     {
         "id": "school",
         "name": "市立仁川小学校",
-        "lat": 34.7795864,
-        "lon": 135.3526471,
+        "lat": 34.7798290,
+        "lon": 135.3533009,
         "osm": "way/104223606",
         "kind": "school",
         "role": "safe",
         "bonus": 800,
+        "placement": "user",
+        "note": "ユーザー指定：OSMのスナップ先 (20,20) から東へ2マスの道路 (22,20) へ移動。安全地帯のまま。",
     },
     {
         "id": "hoshi",
@@ -155,38 +157,50 @@ LANDMARKS = [
     {
         "id": "home",
         "name": "いえ",
-        "lat": 34.7750859,
-        "lon": 135.3564287,
+        "lat": 34.7744930,
+        "lon": 135.3549851,
         "osm": None,
         "kind": "home",
         "role": "safe",
         "bonus": 500,
         "placement": "user",
-        "note": "ユーザー指定：仁川駅の西でいちばん近い行き止まり道路マス。",
+        "note": "ユーザー指定：べんてんいけの左下（南西）の行き止まり道路マス (29,47)。旧位置 (35,44) から移動。",
     },
     {
         "id": "pannel",
         "name": "パンネル",
         "lat": 34.7802242,
-        "lon": 135.3525791,
+        "lon": 135.3530603,
         "osm": None,
         "kind": "bakery",
         "role": "bonus",
         "bonus": 600,
         "placement": "user",
-        "note": "ユーザー指定：仁川小学校のすぐ西の道路。OSMのパンネル（node/7232155158, shop=bakery, 34.7783067,135.3526363）は小学校の約142m南で、すぐ西ではないため未使用。",
+        "note": "ユーザー指定：小学校のすぐ西の道路 (21,18)。学校移動に合わせて東へずらした。",
     },
     {
         "id": "kumon",
         "name": "くもん",
         "lat": 34.7802242,
-        "lon": 135.3523385,
+        "lon": 135.3525791,
         "osm": None,
         "kind": "juku",
         "role": "bonus",
         "bonus": 500,
         "placement": "user",
-        "note": "ユーザー指定：パンネルのさらに西の道路マス。OSMに近傍の公文は見つからず。",
+        "note": "ユーザー指定：パンネルの西の道路 (19,18)。学校移動に合わせてずらした。",
+    },
+    {
+        "id": "lawson",
+        "name": "ローソン",
+        "lat": 34.7802242,
+        "lon": 135.3523385,
+        "osm": None,
+        "kind": "convenience",
+        "role": "bonus",
+        "bonus": 500,
+        "placement": "user",
+        "note": "ユーザー指定：くもんのすぐ西の道路 (18,18)。左から ローソン・くもん・パンネル・しょうがっこう。",
     },
     {
         "id": "kumano",
@@ -958,7 +972,7 @@ def main():
     # ASCII preview (downsampled)
     print("\n--- preview ---")
     marks = {}
-    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J"}
+    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J", "lawson": "L"}
     for lm in LANDMARKS:
         marks[tuple(lm["cell"])] = letters[lm["id"]]
     for x, y in pellets:
