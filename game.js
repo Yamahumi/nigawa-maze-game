@@ -47,6 +47,7 @@
     mandai: "マンダイ",
     racecourse: "はんしんけいばじょう",
     mcdonalds: "マクドナルド",
+    bigboy: "ビッグボーイ",
     benten: "べんてんいけ",
     coop: "コープ",
     ohsho: "おおさかおうしょう",
@@ -943,6 +944,18 @@
         ctx.fill();
         ctx.fillStyle = "#fff";
         ctx.fillRect(-r * 0.18, r * 0.15, r * 0.36, r * 0.55);
+      } else if (lm.id === "bigboy") {
+        // シンプルなハンバーガー（オリジナル）
+        ctx.fillStyle = lm.visited ? "#ffd4a0" : "#e89040";
+        ctx.beginPath();
+        ctx.arc(0, -r * 0.22, r * 0.72, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = lm.visited ? "#c07038" : "#8a3a12";
+        ctx.fillRect(-r * 0.72, -r * 0.12, r * 1.44, r * 0.28);
+        ctx.fillStyle = lm.visited ? "#f0c070" : "#d4a04a";
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.32, r * 0.72, r * 0.32, 0, 0, Math.PI * 2);
+        ctx.fill();
       } else if (lm.id === "ohsho") {
         ctx.fillStyle = lm.visited ? "#ffc9a0" : "#ff7a45";
         ctx.beginPath();
@@ -1068,7 +1081,7 @@
     const fs = Math.max(15, Math.min(22, tile * 0.62));
     ctx.font = "bold " + fs + "px " + fontFamily;
     const boxes = [];
-    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", dentist: "down", benten: "down", kumano: "up" };
+    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", dentist: "down", benten: "down", kumano: "up" };
     function nameLines(name) {
       if (name === "たからづかちゅうがっこう") return ["たからづか", "ちゅうがっこう"];
       return [name];

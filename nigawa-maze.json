@@ -451,6 +451,28 @@
       ],
       "snap_cells": 0,
       "snap_meters": 0.0
+    },
+    {
+      "id": "bigboy",
+      "name": "ビッグボーイ",
+      "lat": 34.7806195,
+      "lon": 135.3573911,
+      "osm": null,
+      "kind": "restaurant",
+      "role": "bonus",
+      "bonus": 600,
+      "placement": "user",
+      "note": "ユーザー指定：マクドナルドのすぐ南の道路 (39,16)。OSM位置は使わない。",
+      "raw_cell": [
+        39,
+        16
+      ],
+      "cell": [
+        39,
+        16
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
     }
   ],
   "playerStart": [

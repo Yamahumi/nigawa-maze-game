@@ -237,6 +237,18 @@ LANDMARKS = [
         "placement": "user",
         "note": "ユーザー指定：ホシのびょういんのすぐ北の道路 (39,37)。",
     },
+    {
+        "id": "bigboy",
+        "name": "ビッグボーイ",
+        "lat": 34.7806195,
+        "lon": 135.3573911,
+        "osm": None,
+        "kind": "restaurant",
+        "role": "bonus",
+        "bonus": 600,
+        "placement": "user",
+        "note": "ユーザー指定：マクドナルドのすぐ南の道路 (39,16)。OSM位置は使わない。",
+    },
 ]
 
 
@@ -995,7 +1007,7 @@ def main():
     # ASCII preview (downsampled)
     print("\n--- preview ---")
     marks = {}
-    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J", "lawson": "L", "jhs": "T", "laundry": "W"}
+    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J", "lawson": "L", "jhs": "T", "laundry": "W", "bigboy": "Y"}
     for lm in LANDMARKS:
         marks[tuple(lm["cell"])] = letters[lm["id"]]
     for x, y in pellets:
