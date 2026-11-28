@@ -475,3 +475,147 @@ html.landscape .btn,
   75% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* つかまったときのぜんがめんエフェクト（ランドマークとはちがう、こわくない） */
+#caught-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  pointer-events: none;
+  display: none;
+  overflow: hidden;
+}
+#caught-fx.active { display: block; }
+
+#caught-fx .caught-flash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 45%,
+      rgba(255, 210, 90, 0.5) 0%,
+      rgba(255, 110, 60, 0.42) 42%,
+      rgba(255, 170, 90, 0.16) 72%,
+      rgba(13, 27, 58, 0) 100%);
+  animation: caught-flash 1.3s ease-out forwards;
+}
+
+#caught-fx .caught-burst {
+  position: absolute;
+  width: 0;
+  height: 0;
+  left: 50%;
+  top: 46%;
+  pointer-events: none;
+}
+#caught-fx .caught-pon {
+  position: absolute;
+  left: 18px;
+  top: -28px;
+  transform: rotate(-12deg);
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans CJK JP", "Noto Sans JP", sans-serif;
+  font-size: clamp(26px, 7vw, 42px);
+  font-weight: 800;
+  color: #fff8e0;
+  text-shadow:
+    0 0 12px rgba(255, 140, 60, 0.8),
+    0 3px 0 #d06020;
+  animation: caught-pon 1.3s ease-out forwards;
+  white-space: nowrap;
+}
+#caught-fx .caught-star {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  background: #ffe566;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  animation: caught-star 1.15s ease-out forwards;
+  opacity: 0;
+}
+#caught-fx .caught-star:nth-child(odd) { background: #ffb070; }
+#caught-fx .caught-star:nth-child(3n) { background: #fff4c0; }
+
+#caught-fx .caught-label {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  width: 92%;
+  margin: 0;
+  padding: 0 12px;
+  text-align: center;
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans CJK JP", "Noto Sans JP", sans-serif;
+  font-size: clamp(28px, 7.2vw, 50px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  color: #fff8e0;
+  text-shadow:
+    0 0 16px rgba(255, 120, 50, 0.7),
+    0 3px 0 #c05018,
+    0 6px 0 rgba(80, 20, 0, 0.3);
+  animation: caught-label 1.3s ease-out forwards;
+  word-break: keep-all;
+}
+
+#app.shaking {
+  animation: caught-shake 0.4s ease-out;
+}
+
+@keyframes caught-flash {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes caught-label {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  16% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  30% { transform: translate(-50%, -50%) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.03); }
+}
+@keyframes caught-pon {
+  0% { opacity: 0; transform: rotate(-12deg) scale(0.4); }
+  18% { opacity: 1; transform: rotate(-12deg) scale(1.2); }
+  32% { transform: rotate(-8deg) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(-8deg) scale(1.05); }
+}
+@keyframes caught-star {
+  0% { opacity: 0; transform: rotate(var(--rot, 0deg)) translate(0, 0) scale(0.4); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--rot, 0deg)) translate(var(--dx, 40px), var(--dy, -20px)) scale(1.1); }
+}
+@keyframes caught-shake {
+  0%, 100% { transform: translate(0, 0); }
+  18% { transform: translate(-8px, 3px); }
+  36% { transform: translate(7px, -3px); }
+  54% { transform: translate(-5px, -2px); }
+  72% { transform: translate(4px, 2px); }
+}
+
+@media (orientation: landscape) {
+  #caught-fx .caught-label { font-size: clamp(24px, 5.6vw, 40px); top: 48%; }
+  #caught-fx .caught-pon { font-size: clamp(22px, 5vw, 34px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app.shaking { animation: none !important; }
+  #caught-fx .caught-flash { animation: caught-flash-soft 1.2s ease-out forwards; }
+  #caught-fx .caught-label { animation: caught-label-soft 1.2s ease-out forwards; }
+  #caught-fx .caught-pon { animation: caught-label-soft 1.2s ease-out forwards; }
+  #caught-fx .caught-star { display: none !important; }
+}
+@keyframes caught-flash-soft {
+  0% { opacity: 0; }
+  20% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+@keyframes caught-label-soft {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}

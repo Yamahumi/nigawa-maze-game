@@ -93,6 +93,9 @@
     fx: document.getElementById("landmark-fx"),
     fxCanvas: document.querySelector("#landmark-fx .fx-particles"),
     fxLabel: document.querySelector("#landmark-fx .fx-label"),
+    caughtFx: document.getElementById("caught-fx"),
+    caughtBurst: document.querySelector("#caught-fx .caught-burst"),
+    caughtLabel: document.querySelector("#caught-fx .caught-label"),
   };
   const ctx = el.canvas.getContext("2d", { alpha: false });
 
@@ -160,6 +163,7 @@
   };
 
   const FX_MS = 1500;
+  const CAUGHT_SECS = 1.3;
   const FX_COOLDOWN_MS = 4000;
   const FX_COLORS = ["#ffe566", "#ff6b8a", "#7dffb3", "#59c7ff", "#ff9f4a", "#e08cff", "#fff8e8"];
   let occupyingLm = null;
@@ -354,6 +358,84 @@
     if (last != null && now - last < FX_COOLDOWN_MS) return;
     lmFxAt.set(here.id, now);
     playLandmarkFx(here);
+  }
+
+  let caughtHideTimer = 0;
+  let caughtShakeTimer = 0;
+  let caughtActiveUntil = 0;
+
+  function hideCaughtFx() {
+    if (caughtHideTimer) { clearTimeout(caughtHideTimer); caughtHideTimer = 0; }
+    if (caughtShakeTimer) { clearTimeout(caughtShakeTimer); caughtShakeTimer = 0; }
+    if (el.caughtFx) el.caughtFx.classList.remove("active");
+    if (el.app) el.app.classList.remove("shaking");
+    caughtActiveUntil = 0;
+  }
+
+  function viewportPosForWorld(x, y) {
+    const s = worldToScreen(x, y);
+    const r = el.canvas.getBoundingClientRect();
+    const sx = r.left + s.x * (r.width / Math.max(1, viewW));
+    const sy = r.top + s.y * (r.height / Math.max(1, viewH));
+    const pad = 48;
+    const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    return {
+      x: Math.max(pad, Math.min(vw - pad, sx)),
+      y: Math.max(pad, Math.min(vh - pad, sy)),
+    };
+  }
+
+  function playCaughtFx(isOver) {
+    if (!el.caughtFx || !el.caughtLabel) return;
+    hideLandmarkFx();
+    el.caughtLabel.textContent = isOver ? "またあそぼうね！" : "つかまっちゃった！";
+    if (el.caughtBurst) {
+      const pos = (player && level) ? viewportPosForWorld(player.x, player.y) : { x: window.innerWidth / 2, y: window.innerHeight * 0.46 };
+      el.caughtBurst.style.left = pos.x + "px";
+      el.caughtBurst.style.top = pos.y + "px";
+      el.caughtBurst.querySelectorAll(".caught-star").forEach((n) => n.remove());
+      if (!prefersReducedMotion()) {
+        for (let i = 0; i < 7; i++) {
+          const st = document.createElement("div");
+          st.className = "caught-star";
+          const ang = (Math.PI * 2 * i) / 7 + 0.2;
+          const dist = 36 + (i % 3) * 16;
+          st.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+          st.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+          st.style.setProperty("--rot", (i * 40) + "deg");
+          st.style.animationDelay = (i * 0.02) + "s";
+          el.caughtBurst.appendChild(st);
+        }
+      }
+    }
+    el.caughtFx.classList.remove("active");
+    if (el.app) el.app.classList.remove("shaking");
+    void el.caughtFx.offsetWidth;
+    el.caughtFx.classList.add("active");
+    if (!prefersReducedMotion() && el.app) {
+      el.app.classList.add("shaking");
+      if (caughtShakeTimer) clearTimeout(caughtShakeTimer);
+      caughtShakeTimer = setTimeout(() => {
+        if (el.app) el.app.classList.remove("shaking");
+        caughtShakeTimer = 0;
+      }, 420);
+    }
+    caughtActiveUntil = performance.now() + CAUGHT_SECS * 1000;
+    if (caughtHideTimer) clearTimeout(caughtHideTimer);
+    caughtHideTimer = setTimeout(() => {
+      hideCaughtFx();
+    }, CAUGHT_SECS * 1000 + 40);
+  }
+
+  function beginCaught() {
+    if (dying || mode !== "play") return false;
+    dying = true;
+    dieT = CAUGHT_SECS;
+    sfx.hit();
+    showMsg("いてて！", 1.1);
+    playCaughtFx(lives <= 1);
+    return true;
   }
 
   function opposite(d) {
@@ -567,7 +649,7 @@
       el.titleScreen.hidden = true;
       el.endScreen.hidden = false;
     }
-    if (which !== "play") hideLandmarkFx();
+    if (which !== "play") { hideLandmarkFx(); hideCaughtFx(); }
     layout();
   }
 
@@ -587,6 +669,7 @@
     }
     initHorses();
     resetLandmarkFxState();
+    hideCaughtFx();
     showMsg("スタート！", 1.4);
     updateHud();
     setUI("play");
@@ -938,10 +1021,7 @@
         sfx.eat();
         updateHud();
       } else if (graceT <= 0) {
-        dying = true;
-        dieT = 1.15;
-        sfx.hit();
-        showMsg("いてて！", 1.1);
+        beginCaught();
         break;
       }
     }
@@ -1676,7 +1756,11 @@
     const face = player.face || player.dir || DIRS.right;
     ctx.save();
     ctx.translate(px, py);
-    if (dying) ctx.globalAlpha = Math.max(0, dieT);
+    if (dying) {
+      const fade = Math.max(0, Math.min(1, dieT / 0.35));
+      ctx.globalAlpha = fade;
+      ctx.rotate(((CAUGHT_SECS - dieT) / CAUGHT_SECS) * Math.PI * 4);
+    }
     // 左むきは回転せずよこに反転（目は上のまま）
     if (face === DIRS.left) ctx.scale(-1, 1);
     // 口だけ向きを変える。左右は +x、下は +y、上は -y。
@@ -1701,10 +1785,29 @@
       ex = r * 0.2;
       ey = -r * 0.42;
     }
-    ctx.fillStyle = "#203060";
-    ctx.beginPath();
-    ctx.arc(ex, ey, r * 0.13, 0, Math.PI * 2);
-    ctx.fill();
+    if (dying) {
+      // 目をくるくる（こわくない）
+      const spin = (CAUGHT_SECS - dieT) * 10;
+      for (const [sx, sy] of [[-r * 0.28, -r * 0.22], [r * 0.28, -r * 0.22]]) {
+        ctx.strokeStyle = "#203060";
+        ctx.lineWidth = Math.max(1.4, r * 0.08);
+        ctx.beginPath();
+        for (let i = 0; i <= 8; i++) {
+          const a = spin + i * 0.7;
+          const rr = r * (0.04 + i * 0.035);
+          const x = sx + Math.cos(a) * rr;
+          const y = sy + Math.sin(a) * rr;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    } else {
+      ctx.fillStyle = "#203060";
+      ctx.beginPath();
+      ctx.arc(ex, ey, r * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -2182,6 +2285,19 @@
     },
     setMouth(t) { mouth = t; },
     setDying(on, t) { dying = !!on; dieT = t == null ? 1 : t; },
+    forceCatch() { return beginCaught(); },
+    getCaughtFxState() {
+      return {
+        active: !!(el.caughtFx && el.caughtFx.classList.contains("active")),
+        label: el.caughtLabel ? el.caughtLabel.textContent : "",
+        dying: dying,
+        dieT: dieT,
+        lives: lives,
+        graceT: graceT,
+        until: caughtActiveUntil,
+        reduced: prefersReducedMotion(),
+      };
+    },
     redraw() { draw(); },
     step(seconds) {
       let left = seconds;
