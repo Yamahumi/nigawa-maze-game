@@ -6,6 +6,7 @@
   const ENEMY_SPEED = { chase: 2.20, ambush: 2.09, random: 1.84, patrol: 1.98, fright: 1.40, eyes: 7.2 };
   const POWER_SECS = 11;
   const GRACE_SECS = 2.4;
+  const BIKE_SECS = 10;
   const EAT_POINTS = [200, 400, 800, 1600];
   const LANDMARK_BONUS_DEFAULT = 500;
 
@@ -96,6 +97,8 @@
     caughtFx: document.getElementById("caught-fx"),
     caughtBurst: document.querySelector("#caught-fx .caught-burst"),
     caughtLabel: document.querySelector("#caught-fx .caught-label"),
+    bikeHud: document.getElementById("bike-hud"),
+    bikeBar: document.querySelector("#bike-hud .bike-bar"),
   };
   const ctx = el.canvas.getContext("2d", { alpha: false });
 
@@ -125,6 +128,8 @@
   let heldPads = new Set();
   let dying = false;
   let dieT = 0;
+  let bikeT = 0;
+  let bikeWheel = 0;
 
   function unlockAudio() {
     if (!audioCtx) {
@@ -340,6 +345,44 @@
     }
   }
 
+  function currentPlayerSpeed() {
+    return bikeT > 0 ? PLAYER_SPEED * 2 : PLAYER_SPEED;
+  }
+
+  function updateBikeHud() {
+    if (!el.bikeHud) return;
+    if (bikeT > 0) {
+      el.bikeHud.hidden = false;
+      if (el.bikeBar) el.bikeBar.style.setProperty("--bike-t", String(Math.max(0, Math.min(1, bikeT / BIKE_SECS))));
+    } else {
+      el.bikeHud.hidden = true;
+    }
+  }
+
+  function endBike() {
+    bikeT = 0;
+    updateBikeHud();
+  }
+
+  function startBike() {
+    bikeT = BIKE_SECS;
+    bikeWheel = 0;
+    showMsg("じてんしゃに のった！", 1.6);
+    updateBikeHud();
+  }
+
+  function tickBike(dt) {
+    if (bikeT <= 0) return;
+    const moving = !!(player && player.dir);
+    bikeWheel += dt * (moving ? currentPlayerSpeed() : 1.2) * 2.4;
+    bikeT -= dt;
+    if (bikeT <= 0) {
+      endBike();
+    } else {
+      updateBikeHud();
+    }
+  }
+
   function checkLandmarkArrival() {
     if (mode !== "play" || !level || !player || !level.landmarks) return;
     const tx = Math.round(player.x), ty = Math.round(player.y);
@@ -353,6 +396,7 @@
     }
     if (occupyingLm === here.id) return;
     occupyingLm = here.id;
+    if (here.id === "home") startBike();
     const now = performance.now();
     const last = lmFxAt.get(here.id);
     if (last != null && now - last < FX_COOLDOWN_MS) return;
@@ -432,6 +476,7 @@
     if (dying || mode !== "play") return false;
     dying = true;
     dieT = CAUGHT_SECS;
+    endBike();
     sfx.hit();
     showMsg("いてて！", 1.1);
     playCaughtFx(lives <= 1);
@@ -610,6 +655,7 @@
     graceT = GRACE_SECS;
     dying = false;
     dieT = 0;
+    endBike();
     camX = player.x;
     camY = player.y;
   }
@@ -649,7 +695,7 @@
       el.titleScreen.hidden = true;
       el.endScreen.hidden = false;
     }
-    if (which !== "play") { hideLandmarkFx(); hideCaughtFx(); }
+    if (which !== "play") { hideLandmarkFx(); hideCaughtFx(); endBike(); }
     layout();
   }
 
@@ -670,6 +716,7 @@
     initHorses();
     resetLandmarkFxState();
     hideCaughtFx();
+    endBike();
     showMsg("スタート！", 1.4);
     updateHud();
     setUI("play");
@@ -735,6 +782,7 @@
   }
 
   function settleToCenter(dt) {
+    const speed = currentPlayerSpeed();
     if (nearCenter(player, 0.15)) {
       snapCenter(player);
       player.dir = null;
@@ -744,7 +792,7 @@
       const cx = Math.round(player.x), cy = Math.round(player.y);
       const dx = cx - player.x, dy = cy - player.y;
       const dist = Math.hypot(dx, dy) || 1;
-      const step = Math.min(dist, PLAYER_SPEED * dt);
+      const step = Math.min(dist, speed * dt);
       player.x += (dx / dist) * step;
       player.y += (dy / dist) * step;
       if (nearCenter(player, 0.15)) {
@@ -753,7 +801,7 @@
       }
       return;
     }
-    const r = moveActor(player, player.dir, PLAYER_SPEED, dt, "player");
+    const r = moveActor(player, player.dir, speed, dt, "player");
     if (r === "blocked" || nearCenter(player, 0.15)) {
       snapCenter(player);
       player.dir = null;
@@ -764,6 +812,17 @@
   // 直進中はマス中心にスナップし直さない（毎フレーム引き戻されて動けなくなるのを防ぐ）
   function updatePlayer(dt) {
     if (dying) return;
+    const speed = currentPlayerSpeed();
+    const maxStep = 0.3;
+    let left = dt;
+    while (left > 1e-8) {
+      const slice = Math.min(left, maxStep / Math.max(speed, 0.01));
+      updatePlayerSlice(slice, speed);
+      left -= slice;
+    }
+  }
+
+  function updatePlayerSlice(dt, speed) {
     if (wantDir) player.face = wantDir;
 
     // reverse immediately when the opposite way is requested
@@ -777,7 +836,7 @@
     if (!wantDir) {
       settleToCenter(dt);
     } else if (goingWanted) {
-      const r = moveActor(player, player.dir, PLAYER_SPEED, dt, "player");
+      const r = moveActor(player, player.dir, speed, dt, "player");
       if (r === "blocked") {
         snapCenter(player);
         player.dir = null;
@@ -787,7 +846,7 @@
       if (openAhead(player, wantDir, "player")) {
         player.dir = wantDir;
         player.face = wantDir;
-        const r = moveActor(player, player.dir, PLAYER_SPEED, dt, "player");
+        const r = moveActor(player, player.dir, speed, dt, "player");
         if (r === "blocked") {
           snapCenter(player);
           player.dir = null;
@@ -800,7 +859,7 @@
       }
     } else if (player.dir) {
       // 横方向キー：次のマス中心までだけ進み、そこで曲げるか止まる
-      const r = moveActor(player, player.dir, PLAYER_SPEED, dt, "player");
+      const r = moveActor(player, player.dir, speed, dt, "player");
       if (r === "blocked" || nearCenter(player, 0.2)) {
         snapCenter(player);
         if (openAhead(player, wantDir, "player")) {
@@ -1747,6 +1806,85 @@
     ctx.closePath();
   }
 
+  function drawPlayerOnBike(r, face) {
+    // 左むきだけよこ反転。うえ・したでもじてんしゃのよこ絵のまま。
+    if (face === DIRS.left) ctx.scale(-1, 1);
+    const tilt = face === DIRS.up ? -0.18 : face === DIRS.down ? 0.18 : 0;
+    if (tilt) ctx.rotate(tilt);
+    ctx.scale(1.28, 1.28);
+    const wr = r * 0.52;
+    const rear = { x: -r * 0.72, y: r * 0.62 };
+    const front = { x: r * 0.86, y: r * 0.62 };
+    const seat = { x: -r * 0.18, y: -r * 0.08 };
+    const pedal = { x: r * 0.1, y: r * 0.42 };
+    const bar = { x: r * 0.62, y: -r * 0.22 };
+    // wheels + spinning spokes
+    const spokeAng = bikeWheel;
+    for (const wheel of [rear, front]) {
+      ctx.beginPath();
+      ctx.arc(wheel.x, wheel.y, wr, 0, Math.PI * 2);
+      ctx.fillStyle = "#e8eef8";
+      ctx.fill();
+      ctx.lineWidth = Math.max(2, r * 0.1);
+      ctx.strokeStyle = "#2a3d6a";
+      ctx.stroke();
+      ctx.save();
+      ctx.translate(wheel.x, wheel.y);
+      ctx.rotate(spokeAng);
+      ctx.strokeStyle = "#4a608f";
+      ctx.lineWidth = Math.max(1.2, r * 0.06);
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 * i) / 6;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * wr * 0.82, Math.sin(a) * wr * 0.82);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(wheel.x, wheel.y, wr * 0.16, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffb347";
+      ctx.fill();
+    }
+    // frame
+    ctx.strokeStyle = "#3b82f6";
+    ctx.lineWidth = Math.max(2.4, r * 0.14);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(rear.x, rear.y);
+    ctx.lineTo(seat.x, seat.y);
+    ctx.lineTo(pedal.x, pedal.y);
+    ctx.lineTo(rear.x, rear.y);
+    ctx.moveTo(pedal.x, pedal.y);
+    ctx.lineTo(front.x, front.y);
+    ctx.moveTo(seat.x, seat.y);
+    ctx.lineTo(bar.x, bar.y);
+    ctx.lineTo(front.x, front.y);
+    ctx.stroke();
+    // handlebar + seat
+    ctx.strokeStyle = "#203060";
+    ctx.lineWidth = Math.max(2, r * 0.12);
+    ctx.beginPath();
+    ctx.moveTo(bar.x - r * 0.16, bar.y);
+    ctx.lineTo(bar.x + r * 0.18, bar.y - r * 0.06);
+    ctx.stroke();
+    ctx.fillStyle = "#203060";
+    ctx.beginPath();
+    ctx.ellipse(seat.x, seat.y + r * 0.04, r * 0.22, r * 0.08, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // rider (yellow character on top)
+    const rr = r * 0.72;
+    ctx.fillStyle = "#ffe14a";
+    ctx.beginPath();
+    ctx.arc(seat.x, seat.y - rr * 0.72, rr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#203060";
+    ctx.beginPath();
+    ctx.arc(seat.x + rr * 0.22, seat.y - rr * 0.95, rr * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   function drawPlayer() {
     const ox = -camX * tile, oy = -camY * tile;
     const px = ox + (player.x + 0.5) * tile;
@@ -1760,6 +1898,14 @@
       const fade = Math.max(0, Math.min(1, dieT / 0.35));
       ctx.globalAlpha = fade;
       ctx.rotate(((CAUGHT_SECS - dieT) / CAUGHT_SECS) * Math.PI * 4);
+    }
+    if (!dying && bikeT > 0) {
+      if (bikeT <= 2 && Math.floor(flash * 8) % 2 === 0) {
+        ctx.globalAlpha = 0.28;
+      }
+      drawPlayerOnBike(r, face);
+      ctx.restore();
+      return;
     }
     // 左むきは回転せずよこに反転（目は上のまま）
     if (face === DIRS.left) ctx.scale(-1, 1);
@@ -1981,6 +2127,7 @@
         afterDeath(dt);
       } else {
         if (graceT > 0) graceT -= dt;
+        tickBike(dt);
         if (powerT > 0) {
           powerT -= dt;
           if (powerT <= 0) eatStreak = 0;
@@ -2286,6 +2433,21 @@
     setMouth(t) { mouth = t; },
     setDying(on, t) { dying = !!on; dieT = t == null ? 1 : t; },
     forceCatch() { return beginCaught(); },
+    getBikeState() {
+      return {
+        bikeT: bikeT,
+        active: bikeT > 0,
+        speed: currentPlayerSpeed(),
+        baseSpeed: PLAYER_SPEED,
+        occupying: occupyingLm,
+        x: player ? player.x : null,
+        y: player ? player.y : null,
+        dir: player && player.dir ? player.dir.name : null,
+        hud: !!(el.bikeHud && !el.bikeHud.hidden),
+        msg: el.message ? el.message.textContent : "",
+      };
+    },
+    startBike() { startBike(); return this.getBikeState(); },
     getCaughtFxState() {
       return {
         active: !!(el.caughtFx && el.caughtFx.classList.contains("active")),
@@ -2314,6 +2476,7 @@
             afterDeath(dt);
           } else {
             if (graceT > 0) graceT -= dt;
+            tickBike(dt);
             if (powerT > 0) {
               powerT -= dt;
               if (powerT <= 0) eatStreak = 0;

@@ -285,7 +285,7 @@ LANDMARKS = [
         "role": "bonus",
         "bonus": 600,
         "placement": "user",
-        "note": "ユーザー指定：はいしゃ(49,55)の南の道路。(49,56)は壁のため、同じ列の最寄り歩行マス (49,57)。",
+        "note": "ユーザー指定：はいしゃの南。ビルド時に南へ拡張した道路上のセルへ置く。",
     },
 ]
 
@@ -352,7 +352,9 @@ def landmark_bounds_m(cell_m: float):
         xs.append(x)
         ys.append(y)
     pad = 280.0
-    return min(xs) - pad, min(ys) - pad, max(xs) + pad, max(ys) + pad, m_lat, m_lon
+    # Extra rows only on the south edge so existing cell coordinates stay put.
+    south_extra = 12 * cell_m
+    return min(xs) - pad, min(ys) - pad, max(xs) + pad, max(ys) + pad + south_extra, m_lat, m_lon
 
 
 
@@ -1083,6 +1085,103 @@ def main():
         "cell_m": CELL_M,
     }
     area_fills, area_labels = build_area_labels(OSM_PATH, cropped, origin_out)
+
+    # Keep every previously shipped landmark / pellet / enemy start in place.
+    # Only swimming may move, and only new southern rows get extra dots.
+    prev = None
+    if OUT_PATH.exists():
+        prev = json.loads(OUT_PATH.read_text(encoding="utf-8"))
+
+    def walkable(x, y):
+        return 0 <= x < cw and 0 <= y < ch and cropped[y][x] == 0
+
+    if prev:
+        prev_lms = {lm["id"]: lm for lm in prev.get("landmarks", [])}
+        for lm in LANDMARKS:
+            if lm["id"] == "swimming":
+                continue
+            oldlm = prev_lms.get(lm["id"])
+            if not oldlm:
+                continue
+            oc, orow = oldlm["cell"]
+            if walkable(oc, orow):
+                if lm["cell"] != [oc, orow]:
+                    print(f"preserve landmark {lm['id']} {lm['cell']} -> {[oc, orow]}")
+                lm["cell"] = [oc, orow]
+                if "raw_cell" in oldlm:
+                    lm["raw_cell"] = list(oldlm["raw_cell"])
+            else:
+                print(f"WARNING cannot preserve {lm['id']} at {(oc, orow)}; now {lm['cell']}")
+
+    dentist = next(lm for lm in LANDMARKS if lm["id"] == "dentist")
+    dx, dy = dentist["cell"]
+    swim = next(lm for lm in LANDMARKS if lm["id"] == "swimming")
+    cands = []
+    for y in range(dy + 6, min(ch, dy + 11)):
+        for x in range(dx - 2, dx + 3):
+            if walkable(x, y):
+                cands.append((abs(x - dx), -y, x, y))
+    if not cands:
+        # fallback: nearest walkable 6–14 rows south, then any south of dentist
+        for y in range(dy + 6, min(ch, dy + 15)):
+            for x in range(dx - 4, dx + 5):
+                if walkable(x, y):
+                    cands.append((abs(x - dx), -y, x, y))
+    if not cands:
+        for y in range(dy + 3, ch):
+            for x in range(dx - 4, dx + 5):
+                if walkable(x, y):
+                    cands.append((abs(x - dx) + max(0, 6 - (y - dy)), -y, x, y))
+    if not cands:
+        raise SystemExit(f"no walkable cell south of dentist {dentist['cell']} in {cw}x{ch}")
+    cands.sort()
+    sx, sy = cands[0][2], cands[0][3]
+    swim["cell"] = [sx, sy]
+    swim["raw_cell"] = [sx, sy]
+    swim["snap_cells"] = 0
+    swim["snap_meters"] = 0.0
+    # cell-center lat/lon so a later rebuild stays on this tile
+    swim["lat"] = origin_out["lat0"] - (origin_out["miny"] + (sy + 0.5) * CELL_M) / origin_out["m_lat"]
+    swim["lon"] = origin_out["lon0"] + (origin_out["minx"] + (sx + 0.5) * CELL_M) / origin_out["m_lon"]
+    swim["placement"] = "user"
+    swim["note"] = (
+        f"ユーザー指定：はいしゃ{tuple(dentist['cell'])}よりさらに南へ。"
+        f"マップを南に約12マス広げ、近い道路 {(sx, sy)} へ配置（はいしゃの南へ {sy - dy} マス）。"
+    )
+    print(f"swimming placed at ({sx},{sy})  {sy - dy} rows south of dentist {tuple(dentist['cell'])}")
+
+    if prev:
+        old_enemies = [list(p) for p in prev.get("enemyStarts", [])]
+        if len(old_enemies) == 4 and all(walkable(x, y) for x, y in old_enemies):
+            if old_enemies != [list(e[:2]) for e in enemies]:
+                print("preserve enemyStarts", enemies, "->", old_enemies)
+            enemies = [(x, y, 0) for x, y in old_enemies]
+        else:
+            print("WARNING enemy starts not fully preserved", old_enemies)
+        old_pels = [list(p) for p in prev.get("powerPellets", [])]
+        if old_pels and all(walkable(x, y) for x, y in old_pels):
+            if old_pels != pellets:
+                print("preserve powerPellets", pellets, "->", old_pels)
+            pellets = old_pels
+        else:
+            print("WARNING power pellets not fully preserved", old_pels)
+
+    # Rebuild blocked / dots: keep previous dots in the old region, add new southern dots.
+    blocked = {tuple(LANDMARKS[0]["cell"])} | {tuple(lm["cell"]) for lm in LANDMARKS}
+    blocked |= {tuple(p) for p in pellets}
+    prev_h = prev["height"] if prev else 0
+    prev_dotset = {tuple(p) for p in (prev.get("dots") if prev else [])}
+    dot_cells = []
+    for y in range(ch):
+        for x in range(cw):
+            if cropped[y][x] != 0 or (x, y) in blocked:
+                continue
+            if y < prev_h:
+                if (x, y) in prev_dotset:
+                    dot_cells.append([x, y])
+            elif (x + y) % 3 == 0:
+                dot_cells.append([x, y])
+    print("dot cells", len(dot_cells), "prev", len(prev_dotset) if prev else 0)
 
     data = {
         "name": "にがわステージ",

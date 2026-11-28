@@ -619,3 +619,45 @@ html.landscape .btn,
   75% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+#bike-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+#bike-hud[hidden] { display: none !important; }
+.bike-label {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffe566;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.35);
+}
+.bike-bar {
+  width: min(140px, 42vw);
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  border: 2px solid rgba(255,229,102,0.85);
+  overflow: hidden;
+}
+.bike-bar > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7dffb3, #ffe566);
+  transform-origin: left center;
+  transform: scaleX(var(--bike-t, 1));
+}
+html.landscape #bike-hud,
+#app.landscape #bike-hud {
+  align-items: flex-start;
+}
+html.landscape .bike-label,
+#app.landscape .bike-label { font-size: 16px; }
+html.landscape .bike-bar,
+#app.landscape .bike-bar { width: 100%; max-width: 120px; }
