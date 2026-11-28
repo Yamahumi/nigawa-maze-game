@@ -350,6 +350,11 @@
     return bikeT > 0 ? PLAYER_SPEED * 2 : PLAYER_SPEED;
   }
 
+  function bikePercent() {
+    if (bikeT <= 0) return 0;
+    return Math.min(100, Math.ceil(bikeT) * 10);
+  }
+
   function updateBikeHud() {
     if (!el.bikeHud) return;
     if (bikeT > 0) {
@@ -1903,6 +1908,31 @@
     ctx.fill();
   }
 
+  function drawBikePercent(px, py) {
+    if (bikeT <= 0 || dying) return;
+    const pct = bikePercent();
+    if (pct <= 0) return;
+    ctx.save();
+    if (bikeT <= 2 && Math.floor(flash * 8) % 2 === 0) {
+      ctx.globalAlpha = 0.28;
+    }
+    const fs = Math.max(26, Math.min(40, tile * 1.1));
+    ctx.font = "800 " + fs + "px 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Noto Sans CJK JP', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    const label = pct + "%";
+    const x = px;
+    const y = py - tile * 1.22;
+    ctx.lineJoin = "round";
+    ctx.miterLimit = 2;
+    ctx.lineWidth = Math.max(6, fs * 0.22);
+    ctx.strokeStyle = "rgba(8,16,36,0.95)";
+    ctx.strokeText(label, x, y);
+    ctx.fillStyle = "#ffe566";
+    ctx.fillText(label, x, y);
+    ctx.restore();
+  }
+
   function drawPlayer() {
     const ox = -camX * tile, oy = -camY * tile;
     const px = ox + (player.x + 0.5) * tile;
@@ -1923,6 +1953,7 @@
       }
       drawPlayerOnBike(r, face);
       ctx.restore();
+      drawBikePercent(px, py);
       return;
     }
     // 左むきは回転せずよこに反転（目は上のまま）
@@ -2456,6 +2487,7 @@
     getBikeState() {
       return {
         bikeT: bikeT,
+        percent: bikePercent(),
         active: bikeT > 0,
         speed: currentPlayerSpeed(),
         baseSpeed: PLAYER_SPEED,
