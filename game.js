@@ -2009,55 +2009,125 @@
     ctx.restore();
   }
 
+  function poopBrown(id) {
+    if (id === "chase") return "#8b4a1f";
+    if (id === "ambush") return "#7a3d16";
+    if (id === "random") return "#9a5a28";
+    if (id === "patrol") return "#6a3418";
+    return "#8b4a1f";
+  }
+
+  function poopPhase(e) {
+    const i = ENEMY_META.findIndex((m) => m.id === e.id);
+    return (i < 0 ? 0 : i) * 1.35;
+  }
+
+  function drawPoopBody(r, body) {
+    ctx.fillStyle = "rgba(20,16,28,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.82, r * 0.72, r * 0.16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.48, r * 0.96, r * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.03, r * 0.02, r * 0.74, r * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(r * 0.04, -r * 0.4, r * 0.5, r * 0.34, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(r * 0.02, -r * 0.66);
+    ctx.quadraticCurveTo(r * 0.2, -r * 0.98, r * 0.4, -r * 1.06);
+    ctx.quadraticCurveTo(r * 0.22, -r * 0.86, r * 0.1, -r * 0.62);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,230,200,0.28)";
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.28, r * 0.32, r * 0.28, r * 0.14, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.22, -r * 0.08, r * 0.2, r * 0.1, -0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.08, -r * 0.5, r * 0.14, r * 0.08, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawPoopBow(r, color) {
+    ctx.fillStyle = color;
+    const cx = r * 0.28, cy = -r * 0.92;
+    ctx.beginPath();
+    ctx.ellipse(cx - r * 0.16, cy, r * 0.13, r * 0.09, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + r * 0.16, cy, r * 0.13, r * 0.09, 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   function drawEnemy(e) {
     const ox = -camX * tile, oy = -camY * tile;
     const px = ox + (e.x + 0.5) * tile;
     const py = oy + (e.y + 0.5) * tile;
-    if (px < -tile || py < -tile || px > viewW + tile || py > viewH + tile) return;
+    if (px < -tile || py < -tile * 1.2 || px > viewW + tile || py > viewH + tile) return;
     const r = tile * 0.4;
     const frightened = powerT > 0 && !e.eaten;
     const blink = frightened && powerT < 2.2 && Math.floor(flash * 8) % 2 === 0;
-    let body = e.color;
-    if (e.eaten) body = "rgba(220,230,255,0.0)";
-    else if (frightened) body = blink ? "#fff4d0" : "#6aa8ff";
+    let body = poopBrown(e.id);
+    if (frightened) body = blink ? "#fff4d0" : "#8ec6ff";
+    const bounce = (e.eaten || prefersReducedMotion()) ? 0 : Math.sin(flash * 7 + poopPhase(e)) * r * 0.14;
     ctx.save();
-    ctx.translate(px, py);
+    ctx.translate(px, py + bounce);
     if (!e.eaten) {
-      ctx.fillStyle = body;
+      drawPoopBody(r, body);
+      if (!frightened) drawPoopBow(r, e.color);
+      ctx.globalAlpha = frightened ? 1 : 0.8;
+      ctx.fillStyle = frightened ? "rgba(120,90,140,0.35)" : e.color;
       ctx.beginPath();
-      ctx.arc(0, -r * 0.1, r, Math.PI, 0);
-      ctx.lineTo(r, r * 0.75);
-      const scallop = 3;
-      for (let i = scallop; i >= 0; i--) {
-        const sx = -r + (i / scallop) * (r * 2);
-        const sy = r * (i % 2 === 0 ? 0.75 : 0.4);
-        ctx.lineTo(sx, sy);
-      }
-      ctx.closePath();
+      ctx.ellipse(-r * 0.42, r * 0.12, r * 0.12, r * 0.08, 0, 0, Math.PI * 2);
+      ctx.ellipse(r * 0.4, r * 0.12, r * 0.12, r * 0.08, 0, 0, Math.PI * 2);
       ctx.fill();
-      // smile when not frightened
-      if (!frightened) {
-        ctx.strokeStyle = "rgba(40,20,40,0.35)";
-        ctx.lineWidth = 1.6;
+      ctx.globalAlpha = 1;
+      if (frightened) {
+        ctx.strokeStyle = "#203060";
+        ctx.lineWidth = Math.max(1.4, r * 0.1);
+        ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.arc(0, r * 0.15, r * 0.28, 0.15, Math.PI - 0.15);
+        ctx.moveTo(-r * 0.42, -r * 0.5);
+        ctx.lineTo(-r * 0.14, -r * 0.38);
+        ctx.moveTo(r * 0.44, -r * 0.5);
+        ctx.lineTo(r * 0.16, -r * 0.38);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, r * 0.2, r * 0.12, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = "rgba(40,20,40,0.55)";
+        ctx.lineWidth = Math.max(1.5, r * 0.1);
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(0, r * 0.16, r * 0.22, 0.15, Math.PI - 0.15);
         ctx.stroke();
       }
     }
-    // eyes
     const eyesDX = (e.dir && e.dir.x) * r * 0.12;
     const eyesDY = (e.dir && e.dir.y) * r * 0.12;
     const ew = r * 0.22, eh = r * 0.26;
+    const ey = -r * 0.2;
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.ellipse(-r * 0.28 + eyesDX, -r * 0.22 + eyesDY, ew, eh, 0, 0, Math.PI * 2);
-    ctx.ellipse(r * 0.28 + eyesDX, -r * 0.22 + eyesDY, ew, eh, 0, 0, Math.PI * 2);
+    ctx.ellipse(-r * 0.26 + eyesDX, ey + eyesDY, ew, eh, 0, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.28 + eyesDX, ey + eyesDY, ew, eh, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = e.eaten || frightened ? "#203060" : "#243a80";
     const pr = r * 0.1;
     ctx.beginPath();
-    ctx.arc(-r * 0.28 + eyesDX * 2, -r * 0.22 + eyesDY * 2, pr, 0, Math.PI * 2);
-    ctx.arc(r * 0.28 + eyesDX * 2, -r * 0.22 + eyesDY * 2, pr, 0, Math.PI * 2);
+    ctx.arc(-r * 0.26 + eyesDX * 2, ey + eyesDY * 2, pr, 0, Math.PI * 2);
+    ctx.arc(r * 0.28 + eyesDX * 2, ey + eyesDY * 2, pr, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -2503,6 +2573,15 @@
       };
     },
     startBike() { startBike(); return this.getBikeState(); },
+    setPower(t) { powerT = Math.max(0, t || 0); if (powerT <= 0) eatStreak = 0; },
+    setFlash(t) { flash = t || 0; },
+    placeEnemy(i, x, y, dir) {
+      const e = enemies[i];
+      if (!e) return false;
+      e.x = x; e.y = y;
+      if (dir && DIRS[dir]) e.dir = DIRS[dir];
+      return true;
+    },
     getCaughtFxState() {
       return {
         active: !!(el.caughtFx && el.caughtFx.classList.contains("active")),
@@ -2525,6 +2604,8 @@
           msgT -= dt;
           if (msgT <= 0 && el.message) el.message.textContent = "";
         }
+        flash += dt;
+        mouth += dt;
         if (mode === "play" && level) {
           updateHorses(dt);
           if (dying) {
