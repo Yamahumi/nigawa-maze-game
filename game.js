@@ -6,7 +6,7 @@
   const ENEMY_SPEED = { chase: 1.65, ambush: 1.57, random: 1.38, patrol: 1.49, fright: 1.05, eyes: 5.4, grace: 0.65 };
   const POWER_SECS = 11;
   const GRACE_SECS = 2.4;
-  const BIKE_SECS = 20;
+  const BIKE_SECS = 40;
   const EAT_POINTS = [200, 400, 800, 1600];
   const LANDMARK_BONUS_DEFAULT = 500;
 
@@ -352,7 +352,10 @@
 
   function bikePercent() {
     if (bikeT <= 0) return 0;
-    return Math.min(100, Math.ceil(bikeT / 2) * 10);
+    const raw = (bikeT / BIKE_SECS) * 100;
+    // Treat a hair over 20% as 20% so float error at the 32s boundary does not jump to 30%.
+    if (raw <= 20 + 1e-6) return Math.max(1, Math.ceil(Math.min(20, raw)));
+    return Math.min(100, Math.ceil(raw / 10) * 10);
   }
 
   function updateBikeHud() {
@@ -1928,7 +1931,7 @@
     ctx.lineWidth = Math.max(6, fs * 0.22);
     ctx.strokeStyle = "rgba(8,16,36,0.95)";
     ctx.strokeText(label, x, y);
-    ctx.fillStyle = "#ffe566";
+    ctx.fillStyle = pct <= 20 ? "#ff6b6b" : "#ffe566";
     ctx.fillText(label, x, y);
     ctx.restore();
   }
