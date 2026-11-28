@@ -553,6 +553,28 @@
       ],
       "snap_cells": 0,
       "snap_meters": 0.0
+    },
+    {
+      "id": "sushiro",
+      "name": "スシロー",
+      "lat": 34.78378155706073,
+      "lon": 135.35835354198554,
+      "osm": null,
+      "kind": "sushi",
+      "role": "bonus",
+      "bonus": 600,
+      "placement": "user",
+      "note": "ユーザー指定：マクドナルド(39,14)の数マス東、マップ最上段の道路 (43,0)。",
+      "raw_cell": [
+        43,
+        0
+      ],
+      "cell": [
+        43,
+        0
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
     }
   ],
   "playerStart": [

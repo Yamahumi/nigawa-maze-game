@@ -3,7 +3,7 @@
 
   const LIVES0 = 5;
   const PLAYER_SPEED = 5.1;
-  const ENEMY_SPEED = { chase: 2.20, ambush: 2.09, random: 1.84, patrol: 1.98, fright: 1.40, eyes: 7.2 };
+  const ENEMY_SPEED = { chase: 1.65, ambush: 1.57, random: 1.38, patrol: 1.49, fright: 1.05, eyes: 5.4, grace: 0.65 };
   const POWER_SECS = 11;
   const GRACE_SECS = 2.4;
   const BIKE_SECS = 10;
@@ -60,6 +60,7 @@
     laundry: "コインランドリー",
     dentist: "はいしゃ",
     swimming: "スイミングスクール",
+    sushiro: "スシロー",
     home: "いえ",
     pannel: "パンネル",
     kumon: "くもん",
@@ -1026,7 +1027,7 @@
         : powerT > 0
           ? ENEMY_SPEED.fright
           : graceT > 0
-            ? 0.86
+            ? ENEMY_SPEED.grace
             : ENEMY_SPEED[e.id] || ENEMY_SPEED.chase;
       e.mode = scatterCycle ? "scatter" : "chase";
 
@@ -1454,6 +1455,23 @@
         ctx.fillStyle = "#fff";
         ctx.fillRect(-r * 0.16, -r * 0.48, r * 0.32, r * 0.96);
         ctx.fillRect(-r * 0.42, -r * 0.16, r * 0.84, r * 0.32);
+      } else if (lm.kind === "sushi" || lm.id === "sushiro") {
+        // にぎりずし
+        ctx.fillStyle = lm.visited ? "#fff8ee" : "#fff6e4";
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.18, r * 0.72, r * 0.48, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(80,50,30,0.25)";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.fillStyle = lm.visited ? "#ffb08a" : "#ff7a4a";
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.18, r * 0.78, r * 0.38, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.2, -r * 0.28, r * 0.22, r * 0.1, -0.3, 0, Math.PI * 2);
+        ctx.fill();
       } else if (lm.kind === "shrine") {
         // とりい
         ctx.fillStyle = lm.visited ? "#ffb0a0" : "#e24a3a";
@@ -1478,7 +1496,7 @@
     const fs = Math.max(15, Math.min(22, tile * 0.62));
     ctx.font = "bold " + fs + "px " + fontFamily;
     const boxes = [];
-    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", mandai: "up", cocokara: "down", piano: "up", dentist: "up", swimming: "left", benten: "down", kumano: "up" };
+    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", mandai: "up", cocokara: "down", piano: "up", dentist: "up", swimming: "left", benten: "down", kumano: "up", sushiro: "down" };
     function nameLines(name) {
       return landmarkNameLines(name);
     }
@@ -2334,6 +2352,8 @@
         viewW: viewW,
         viewH: viewH,
         graceT: graceT,
+        enemySpeeds: { ...ENEMY_SPEED },
+        playerSpeed: PLAYER_SPEED,
         enemies: enemies.map((en) => ({
           id: en.id,
           x: en.x,
