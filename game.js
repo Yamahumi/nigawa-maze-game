@@ -88,6 +88,9 @@
     btnRetry: document.getElementById("btn-retry"),
     btnTitle: document.getElementById("btn-title"),
     dpad: document.getElementById("dpad"),
+    fx: document.getElementById("landmark-fx"),
+    fxCanvas: document.querySelector("#landmark-fx .fx-particles"),
+    fxLabel: document.querySelector("#landmark-fx .fx-label"),
   };
   const ctx = el.canvas.getContext("2d", { alpha: false });
 
@@ -148,10 +151,205 @@
     power() { beep(220, 0.15, "sawtooth", 0.06); beep(330, 0.18, "sawtooth", 0.06, 0.12); beep(440, 0.22, "square", 0.06, 0.26); },
     eat() { beep(523, 0.1, "square", 0.07); beep(659, 0.1, "square", 0.07, 0.1); beep(784, 0.16, "square", 0.07, 0.2); },
     bonus() { beep(660, 0.1, "triangle", 0.07); beep(880, 0.18, "triangle", 0.07, 0.1); },
+    arrive() { beep(523, 0.08, "sine", 0.05); beep(784, 0.1, "sine", 0.05, 0.07); beep(1046, 0.16, "triangle", 0.06, 0.14); },
     hit() { beep(300, 0.16, "sawtooth", 0.07); beep(180, 0.28, "sawtooth", 0.07, 0.12); },
     clear() { beep(523, 0.12, "square", 0.07, 0); beep(659, 0.12, "square", 0.07, 0.12); beep(784, 0.12, "square", 0.07, 0.24); beep(1046, 0.3, "square", 0.07, 0.36); },
     over() { beep(392, 0.2, "sawtooth", 0.07); beep(311, 0.25, "sawtooth", 0.07, 0.2); beep(196, 0.45, "sawtooth", 0.07, 0.4); },
   };
+
+  const FX_MS = 1500;
+  const FX_COOLDOWN_MS = 4000;
+  const FX_COLORS = ["#ffe566", "#ff6b8a", "#7dffb3", "#59c7ff", "#ff9f4a", "#e08cff", "#fff8e8"];
+  let occupyingLm = null;
+  let lmFxAt = new Map();
+  let fxAnim = 0;
+  let fxHideTimer = 0;
+  let fxParts = [];
+  let fxStart = 0;
+  let fxDraw = null;
+  let fxLastTick = 0;
+  let fxActiveUntil = 0;
+
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  function landmarkNameLines(name) {
+    if (name === "たからづかちゅうがっこう") return ["たからづか", "ちゅうがっこう"];
+    if (name === "ココカラファイン") return ["ココカラ", "ファイン"];
+    return [name];
+  }
+
+  function hideLandmarkFx() {
+    if (fxHideTimer) { clearTimeout(fxHideTimer); fxHideTimer = 0; }
+    if (fxAnim) { cancelAnimationFrame(fxAnim); fxAnim = 0; }
+    if (el.fx) el.fx.classList.remove("active");
+    if (el.fxCanvas) {
+      const c = el.fxCanvas.getContext("2d");
+      if (c) c.clearRect(0, 0, el.fxCanvas.width, el.fxCanvas.height);
+    }
+    fxParts = [];
+    fxDraw = null;
+    fxActiveUntil = 0;
+  }
+
+  function sizeFxCanvas() {
+    const c = el.fxCanvas;
+    if (!c) return null;
+    const vv = window.visualViewport;
+    const w = Math.max(1, Math.floor(vv ? vv.width : window.innerWidth));
+    const h = Math.max(1, Math.floor(vv ? vv.height : window.innerHeight));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (c.width !== Math.floor(w * dpr) || c.height !== Math.floor(h * dpr)) {
+      c.style.width = w + "px";
+      c.style.height = h + "px";
+      c.width = Math.floor(w * dpr);
+      c.height = Math.floor(h * dpr);
+    }
+    const ctx = c.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fxDraw = { ctx: ctx, w: w, h: h };
+    return fxDraw;
+  }
+
+  function drawFxStar(ctx, s) {
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + i * Math.PI * 0.8;
+      const b = a + Math.PI * 0.4;
+      const r = s, r2 = s * 0.4;
+      if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      ctx.lineTo(Math.cos(b) * r2, Math.sin(b) * r2);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function tickFxParticles(now) {
+    if (!fxDraw) {
+      fxAnim = 0;
+      return;
+    }
+    const dt = Math.min(0.05, (now - fxLastTick) / 1000);
+    fxLastTick = now;
+    const t = (now - fxStart) / FX_MS;
+    const ctx = fxDraw.ctx, w = fxDraw.w, h = fxDraw.h;
+    ctx.clearRect(0, 0, w, h);
+    const fade = t < 0.65 ? 1 : Math.max(0, 1 - (t - 0.65) / 0.35);
+    for (const p of fxParts) {
+      p.vy += 520 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      if (p.kind === "star") drawFxStar(ctx, p.size);
+      else ctx.fillRect(-p.size * 0.55, -p.size * 0.22, p.size, p.size * 0.44);
+      ctx.restore();
+    }
+    if (t < 1 && el.fx && el.fx.classList.contains("active")) {
+      fxAnim = requestAnimationFrame(tickFxParticles);
+    } else {
+      ctx.clearRect(0, 0, w, h);
+      fxAnim = 0;
+    }
+  }
+
+  function startFxParticles() {
+    if (prefersReducedMotion() || !el.fxCanvas) return;
+    const sz = sizeFxCanvas();
+    if (!sz) return;
+    const w = sz.w, h = sz.h;
+    const n = 32;
+    fxParts = [];
+    for (let i = 0; i < n; i++) {
+      const ang = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.5;
+      const spd = 150 + Math.random() * 240;
+      fxParts.push({
+        x: w * 0.5,
+        y: h * 0.46,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 90,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 8,
+        size: 7 + Math.random() * 8,
+        color: FX_COLORS[i % FX_COLORS.length],
+        kind: i % 3 === 0 ? "star" : "confetti",
+      });
+    }
+    fxStart = performance.now();
+    fxLastTick = fxStart;
+    if (fxAnim) cancelAnimationFrame(fxAnim);
+    fxAnim = requestAnimationFrame(tickFxParticles);
+  }
+
+  function playLandmarkFx(lm) {
+    if (!el.fx || !el.fxLabel || !lm) return;
+    const lines = landmarkNameLines(lm.name || "");
+    el.fxLabel.replaceChildren();
+    for (const s of lines) {
+      const span = document.createElement("span");
+      span.textContent = s;
+      el.fxLabel.appendChild(span);
+    }
+    el.fx.classList.remove("active");
+    void el.fx.offsetWidth;
+    el.fx.classList.add("active");
+    if (fxAnim) { cancelAnimationFrame(fxAnim); fxAnim = 0; }
+    if (prefersReducedMotion()) {
+      if (el.fxCanvas) {
+        const c = el.fxCanvas.getContext("2d");
+        if (c) c.clearRect(0, 0, el.fxCanvas.width, el.fxCanvas.height);
+      }
+    } else {
+      startFxParticles();
+    }
+    sfx.arrive();
+    fxActiveUntil = performance.now() + FX_MS;
+    if (fxHideTimer) clearTimeout(fxHideTimer);
+    fxHideTimer = setTimeout(() => {
+      hideLandmarkFx();
+    }, FX_MS + 40);
+  }
+
+  function resetLandmarkFxState() {
+    hideLandmarkFx();
+    occupyingLm = null;
+    lmFxAt = new Map();
+    if (level && player && level.landmarks) {
+      const tx = Math.round(player.x), ty = Math.round(player.y);
+      for (const lm of level.landmarks) {
+        if (lm.x === tx && lm.y === ty) {
+          occupyingLm = lm.id;
+          break;
+        }
+      }
+    }
+  }
+
+  function checkLandmarkArrival() {
+    if (mode !== "play" || !level || !player || !level.landmarks) return;
+    const tx = Math.round(player.x), ty = Math.round(player.y);
+    let here = null;
+    for (const lm of level.landmarks) {
+      if (lm.x === tx && lm.y === ty) { here = lm; break; }
+    }
+    if (!here) {
+      occupyingLm = null;
+      return;
+    }
+    if (occupyingLm === here.id) return;
+    occupyingLm = here.id;
+    const now = performance.now();
+    const last = lmFxAt.get(here.id);
+    if (last != null && now - last < FX_COOLDOWN_MS) return;
+    lmFxAt.set(here.id, now);
+    playLandmarkFx(here);
+  }
 
   function opposite(d) {
     if (!d) return null;
@@ -364,6 +562,7 @@
       el.titleScreen.hidden = true;
       el.endScreen.hidden = false;
     }
+    if (which !== "play") hideLandmarkFx();
     layout();
   }
 
@@ -381,6 +580,7 @@
         }
       }
     }
+    resetLandmarkFxState();
     showMsg("スタート！", 1.4);
     updateHud();
     setUI("play");
@@ -561,6 +761,7 @@
           updateHud();
         }
       }
+      checkLandmarkArrival();
       if (level.dots.size === 0 && level.power.size === 0) {
         endGame(true);
       }
@@ -1092,9 +1293,7 @@
     const boxes = [];
     const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", mandai: "up", cocokara: "down", dentist: "down", benten: "down", kumano: "up" };
     function nameLines(name) {
-      if (name === "たからづかちゅうがっこう") return ["たからづか", "ちゅうがっこう"];
-      if (name === "ココカラファイン") return ["ココカラ", "ファイン"];
-      return [name];
+      return landmarkNameLines(name);
     }
     function boxFrom(lines, x, y, align, base) {
       const w = Math.max(...lines.map((s) => ctx.measureText(s).width));
@@ -1561,6 +1760,9 @@
     layout();
     if (level) updateCamera();
     draw();
+    if (el.fx && el.fx.classList.contains("active") && !prefersReducedMotion()) {
+      sizeFxCanvas();
+    }
   }
   window.addEventListener("resize", onViewport);
   window.addEventListener("orientationchange", () => {
@@ -1576,6 +1778,22 @@
   }
 
   window.__mazeDebug = {
+    triggerLandmarkFx(id) {
+      if (!level || !level.landmarks) return false;
+      const lm = level.landmarks.find((x) => x.id === id || x.name === id);
+      if (!lm) return false;
+      playLandmarkFx(lm);
+      return true;
+    },
+    getFxState() {
+      return {
+        active: !!(el.fx && el.fx.classList.contains("active")),
+        label: el.fxLabel ? el.fxLabel.innerText : "",
+        occupying: occupyingLm,
+        until: fxActiveUntil,
+        reduced: prefersReducedMotion(),
+      };
+    },
     getLayout() {
       const c = el.canvas;
       const dpr = Math.min(window.devicePixelRatio || 1, 3);
