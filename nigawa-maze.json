@@ -519,6 +519,28 @@
       ],
       "snap_cells": 0,
       "snap_meters": 0.0
+    },
+    {
+      "id": "swimming",
+      "name": "スイミングスクール",
+      "lat": 34.7725167,
+      "lon": 135.3597971,
+      "osm": null,
+      "kind": "pool",
+      "role": "bonus",
+      "bonus": 600,
+      "placement": "user",
+      "note": "ユーザー指定：はいしゃ(49,55)の南の道路。(49,56)は壁のため、同じ列の最寄り歩行マス (49,57)。",
+      "raw_cell": [
+        49,
+        57
+      ],
+      "cell": [
+        49,
+        57
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
     }
   ],
   "playerStart": [

@@ -58,6 +58,7 @@
     hoshi: "ホシのびょういん",
     laundry: "コインランドリー",
     dentist: "はいしゃ",
+    swimming: "スイミングスクール",
     home: "いえ",
     pannel: "パンネル",
     kumon: "くもん",
@@ -180,6 +181,7 @@
     if (name === "たからづかちゅうがっこう") return ["たからづか", "ちゅうがっこう"];
     if (name === "ココカラファイン") return ["ココカラ", "ファイン"];
     if (name === "ピアノきょうしつ") return ["ピアノ", "きょうしつ"];
+    if (name === "スイミングスクール") return ["スイミング", "スクール"];
     return [name];
   }
 
@@ -1184,6 +1186,27 @@
         ctx.fillStyle = "#fff";
         ctx.fillRect(-r * 0.18, -r * 0.62, r * 0.36, r * 1.24);
         ctx.fillRect(-r * 0.62, -r * 0.18, r * 1.24, r * 0.36);
+      } else if (lm.kind === "pool") {
+        ctx.fillStyle = lm.visited ? "#b8e8ff" : "#2aa0d8";
+        ctx.beginPath();
+        rounded(-r * 0.9, -r * 0.45, r * 1.8, r * 1.15, 6);
+        ctx.fill();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.7, -r * 0.05);
+        ctx.quadraticCurveTo(-r * 0.4, r * 0.18, -r * 0.1, -r * 0.05);
+        ctx.quadraticCurveTo(r * 0.2, -r * 0.28, r * 0.5, -r * 0.05);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.55, r * 0.28);
+        ctx.quadraticCurveTo(-r * 0.25, r * 0.48, r * 0.05, r * 0.28);
+        ctx.quadraticCurveTo(r * 0.35, r * 0.08, r * 0.65, r * 0.28);
+        ctx.stroke();
+        ctx.fillStyle = "#ffd36a";
+        ctx.beginPath();
+        ctx.arc(-r * 0.15, -r * 0.55, r * 0.22, 0, Math.PI * 2);
+        ctx.fill();
       } else if (lm.kind === "dentist") {
         ctx.fillStyle = lm.visited ? "#d0f0ff" : "#4ec4e8";
         ctx.beginPath();
@@ -1316,7 +1339,7 @@
     const fs = Math.max(15, Math.min(22, tile * 0.62));
     ctx.font = "bold " + fs + "px " + fontFamily;
     const boxes = [];
-    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", mandai: "up", cocokara: "down", piano: "up", dentist: "down", benten: "down", kumano: "up" };
+    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", mandai: "up", cocokara: "down", piano: "up", dentist: "up", swimming: "left", benten: "down", kumano: "up" };
     function nameLines(name) {
       return landmarkNameLines(name);
     }
