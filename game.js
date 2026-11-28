@@ -6,7 +6,7 @@
   const ENEMY_SPEED = { chase: 1.65, ambush: 1.57, random: 1.38, patrol: 1.49, fright: 1.05, eyes: 5.4, grace: 0.65 };
   const POWER_SECS = 11;
   const GRACE_SECS = 2.4;
-  const BIKE_SECS = 10;
+  const BIKE_SECS = 20;
   const EAT_POINTS = [200, 400, 800, 1600];
   const LANDMARK_BONUS_DEFAULT = 500;
 
@@ -352,7 +352,7 @@
 
   function bikePercent() {
     if (bikeT <= 0) return 0;
-    return Math.min(100, Math.ceil(bikeT) * 10);
+    return Math.min(100, Math.ceil(bikeT / 2) * 10);
   }
 
   function updateBikeHud() {
