@@ -46,6 +46,7 @@
     nursery: "ウエルほいくえん",
     mandai: "マンダイ",
     cocokara: "ココカラファイン",
+    piano: "ピアノきょうしつ",
     racecourse: "はんしんけいばじょう",
     mcdonalds: "マクドナルド",
     bigboy: "ビッグボーイ",
@@ -161,6 +162,7 @@
   const FX_COOLDOWN_MS = 4000;
   const FX_COLORS = ["#ffe566", "#ff6b8a", "#7dffb3", "#59c7ff", "#ff9f4a", "#e08cff", "#fff8e8"];
   let occupyingLm = null;
+  let horses = [];
   let lmFxAt = new Map();
   let fxAnim = 0;
   let fxHideTimer = 0;
@@ -177,6 +179,7 @@
   function landmarkNameLines(name) {
     if (name === "たからづかちゅうがっこう") return ["たからづか", "ちゅうがっこう"];
     if (name === "ココカラファイン") return ["ココカラ", "ファイン"];
+    if (name === "ピアノきょうしつ") return ["ピアノ", "きょうしつ"];
     return [name];
   }
 
@@ -580,6 +583,7 @@
         }
       }
     }
+    initHorses();
     resetLandmarkFxState();
     showMsg("スタート！", 1.4);
     updateHud();
@@ -1259,6 +1263,27 @@
         ctx.stroke();
         ctx.fillStyle = "#2a6a90";
         ctx.fillRect(-r * 0.55, r * 0.48, r * 1.1, r * 0.16);
+      } else if (lm.kind === "piano") {
+        ctx.fillStyle = lm.visited ? "#e8d2a8" : "#8a5a2a";
+        ctx.beginPath();
+        rounded(-r * 0.85, -r * 0.55, r * 1.7, r * 1.25, 3);
+        ctx.fill();
+        ctx.fillStyle = "#fff8e8";
+        ctx.fillRect(-r * 0.72, r * 0.08, r * 1.44, r * 0.48);
+        ctx.fillStyle = "#2a1a10";
+        for (const kx of [-0.4, -0.08, 0.24]) {
+          ctx.fillRect(r * kx, r * 0.08, r * 0.22, r * 0.3);
+        }
+        ctx.fillStyle = lm.visited ? "#c8e8ff" : "#5aa0ff";
+        ctx.beginPath();
+        ctx.arc(r * 0.55, -r * 0.72, r * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = lm.visited ? "#c8e8ff" : "#5aa0ff";
+        ctx.beginPath();
+        ctx.moveTo(r * 0.68, -r * 0.72);
+        ctx.quadraticCurveTo(r * 0.95, -r * 0.55, r * 0.7, -r * 0.2);
+        ctx.stroke();
       } else if (lm.kind === "pharmacy") {
         ctx.fillStyle = lm.visited ? "#c8f0e0" : "#3cbf9a";
         ctx.beginPath();
@@ -1291,7 +1316,7 @@
     const fs = Math.max(15, Math.min(22, tile * 0.62));
     ctx.font = "bold " + fs + "px " + fontFamily;
     const boxes = [];
-    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", mandai: "up", cocokara: "down", dentist: "down", benten: "down", kumano: "up" };
+    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", mandai: "up", cocokara: "down", piano: "up", dentist: "down", benten: "down", kumano: "up" };
     function nameLines(name) {
       return landmarkNameLines(name);
     }
@@ -1378,6 +1403,205 @@
     ctx.fillRect(s * 0.18, s * 0.2, s * 0.12, s * 0.38);
     ctx.fillRect(s * 0.38, s * 0.2, s * 0.12, s * 0.38);
     ctx.restore();
+  }
+
+  const HORSE_COLORS = ["#f3dd9a", "#e2c06a", "#cda56a", "#f7e8c4"];
+
+  function cellInFill(x, y) {
+    return !!(level && level.areaFillCells && level.areaFillCells.has(x + "," + y));
+  }
+
+  function buildHorseTrack() {
+    const interior = new Set();
+    if (!level || !level.areaFillCells) return null;
+    const keys = [];
+    for (const key of level.areaFillCells.keys()) keys.push(key);
+    for (const key of keys) {
+      const p = key.split(",");
+      const x = +p[0], y = +p[1];
+      let ok = true;
+      for (let dx = -1; dx <= 1 && ok; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (!cellInFill(x + dx, y + dy)) { ok = false; break; }
+        }
+      }
+      if (ok) interior.add(key);
+    }
+    function edgeIn(x0, y0, x1, y1) {
+      if (x1 - x0 < 10 || y1 - y0 < 8) return false;
+      for (let x = x0; x <= x1; x++) {
+        if (!interior.has(x + "," + y0) || !interior.has(x + "," + y1)) return false;
+      }
+      for (let y = y0; y <= y1; y++) {
+        if (!interior.has(x0 + "," + y) || !interior.has(x1 + "," + y)) return false;
+      }
+      return true;
+    }
+    const tries = [[46, 10, 74, 27], [44, 9, 75, 28], [44, 9, 82, 21], [46, 8, 75, 28], [51, 14, 78, 23]];
+    let box = null;
+    for (const t of tries) {
+      if (edgeIn(t[0], t[1], t[2], t[3])) { box = t; break; }
+    }
+    if (!box) return { interior: interior, loop: null };
+    const x0 = box[0], y0 = box[1], x1 = box[2], y1 = box[3];
+    const loop = [];
+    for (let x = x0; x < x1; x++) loop.push({ x: x, y: y0, dx: 1, dy: 0 });
+    for (let y = y0; y < y1; y++) loop.push({ x: x1, y: y, dx: 0, dy: 1 });
+    for (let x = x1; x > x0; x--) loop.push({ x: x, y: y1, dx: -1, dy: 0 });
+    for (let y = y1; y > y0; y--) loop.push({ x: x0, y: y, dx: 0, dy: -1 });
+    return { interior: interior, loop: loop };
+  }
+
+  function initHorses() {
+    horses = [];
+    if (!level || !level.areaFillCells || !level.areaFillCells.size) return;
+    const track = buildHorseTrack();
+    if (track && track.loop && track.loop.length >= 16) {
+      const n = 4;
+      const loop = track.loop;
+      const L = loop.length;
+      for (let i = 0; i < n; i++) {
+        horses.push({
+          s: (i * L) / n,
+          speed: 0.85 + i * 0.08,
+          phase: i * 1.3,
+          face: 1,
+          color: HORSE_COLORS[i % HORSE_COLORS.length],
+          loop: loop,
+        });
+      }
+      placeHorsesOnLoop();
+      return;
+    }
+    // ループが作れないときだけ、エリアの中を折り返して歩く
+    const cells = [];
+    if (track) {
+      for (const key of track.interior) {
+        const p = key.split(",");
+        cells.push({ x: +p[0], y: +p[1] });
+      }
+    }
+    if (cells.length < 8) return;
+    const dirs = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+    for (let i = 0; i < 4; i++) {
+      const c = cells[(i * 17 + 5) % cells.length];
+      horses.push({
+        x: c.x, y: c.y,
+        dir: dirs[i],
+        speed: 0.8 + i * 0.1,
+        phase: i * 1.3,
+        face: dirs[i].x < 0 ? -1 : 1,
+        color: HORSE_COLORS[i % HORSE_COLORS.length],
+        interior: track.interior,
+      });
+    }
+  }
+
+  function placeHorsesOnLoop() {
+    for (const h of horses) {
+      if (!h.loop) continue;
+      const L = h.loop.length;
+      let s = h.s % L;
+      if (s < 0) s += L;
+      const i = Math.floor(s) % L;
+      const t = s - Math.floor(s);
+      const a = h.loop[i];
+      const b = h.loop[(i + 1) % L];
+      h.x = a.x + (b.x - a.x) * t;
+      h.y = a.y + (b.y - a.y) * t;
+      if (a.dx) h.face = a.dx;
+    }
+  }
+
+  function updateHorses(dt) {
+    if (!horses.length) return;
+    for (const h of horses) {
+      h.phase += dt * 9;
+      if (h.loop) {
+        h.s += h.speed * dt;
+        placeHorsesOnLoop();
+        continue;
+      }
+      if (!h.dir) continue;
+      h.x += h.dir.x * h.speed * dt;
+      h.y += h.dir.y * h.speed * dt;
+      if (h.dir.x) h.face = h.dir.x < 0 ? -1 : 1;
+      const nx = Math.round(h.x + h.dir.x * 0.55);
+      const ny = Math.round(h.y + h.dir.y * 0.55);
+      if (!h.interior || !h.interior.has(nx + "," + ny)) {
+        h.x = Math.round(h.x);
+        h.y = Math.round(h.y);
+        const dirs = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+        const opts = dirs.filter((d) => d.x !== -h.dir.x || d.y !== -h.dir.y);
+        let found = null;
+        for (const d of opts) {
+          if (h.interior.has(Math.round(h.x + d.x) + "," + Math.round(h.y + d.y))) { found = d; break; }
+        }
+        if (!found) {
+          for (const d of dirs) {
+            if (h.interior.has(Math.round(h.x + d.x) + "," + Math.round(h.y + d.y))) { found = d; break; }
+          }
+        }
+        if (found) {
+          h.dir = found;
+          if (found.x) h.face = found.x < 0 ? -1 : 1;
+        } else {
+          h.dir = { x: -h.dir.x, y: -h.dir.y };
+          if (h.dir.x) h.face = h.dir.x < 0 ? -1 : 1;
+        }
+      }
+    }
+  }
+
+  function drawWalkingHorse(h) {
+    const ox = -camX * tile, oy = -camY * tile;
+    const px = ox + (h.x + 0.5) * tile;
+    const bob = Math.sin(h.phase) * tile * 0.06;
+    const py = oy + (h.y + 0.5) * tile + bob;
+    if (px < -tile * 2 || py < -tile * 2 || px > viewW + tile * 2 || py > viewH + tile * 2) return;
+    const s = tile * 0.74;
+    ctx.save();
+    ctx.translate(px, py);
+    if (h.face < 0) ctx.scale(-1, 1);
+    const swing = Math.sin(h.phase) * s * 0.16;
+    ctx.fillStyle = h.color || "#f0d8a0";
+    ctx.strokeStyle = "rgba(8,16,36,0.75)";
+    ctx.lineWidth = 1.2;
+    // あし（あるく）
+    const legs = [
+      [-s * 0.32, swing],
+      [-s * 0.08, -swing],
+      [s * 0.14, swing * 0.85],
+      [s * 0.36, -swing * 0.85],
+    ];
+    ctx.fillStyle = "#6a4a20";
+    for (const L of legs) {
+      ctx.fillRect(L[0] - s * 0.05, s * 0.12, s * 0.1, s * 0.38 + L[1] * 0.15);
+    }
+    ctx.fillStyle = h.color || "#f0d8a0";
+    ctx.beginPath();
+    ctx.ellipse(0, s * 0.02, s * 0.52, s * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(s * 0.46, -s * 0.26, s * 0.2, s * 0.16, -0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#5a3a18";
+    ctx.beginPath();
+    ctx.ellipse(s * 0.58, -s * 0.34, s * 0.08, s * 0.1, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.5, -s * 0.04);
+    ctx.quadraticCurveTo(-s * 0.8, s * 0.04, -s * 0.58, s * 0.28);
+    ctx.quadraticCurveTo(-s * 0.42, s * 0.08, -s * 0.42, 0);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawHorses() {
+    if (!horses.length) return;
+    for (const h of horses) drawWalkingHorse(h);
   }
 
   function drawAreaLabels() {
@@ -1605,6 +1829,7 @@
     updateCamera();
     drawWalls();
     drawAreaLabels();
+    drawHorses();
     drawDots();
     drawLandmarks();
     for (const e of enemies) drawEnemy(e);
@@ -1625,6 +1850,7 @@
       if (msgT <= 0) el.message.textContent = "";
     }
     if (mode === "play" && level) {
+      updateHorses(dt);
       if (dying) {
         afterDeath(dt);
       } else {
@@ -1785,6 +2011,9 @@
       playLandmarkFx(lm);
       return true;
     },
+    getHorses() {
+      return horses.map((h) => ({ x: h.x, y: h.y, face: h.face, speed: h.speed, onLoop: !!h.loop }));
+    },
     getFxState() {
       return {
         active: !!(el.fx && el.fx.classList.contains("active")),
@@ -1941,6 +2170,7 @@
           if (msgT <= 0 && el.message) el.message.textContent = "";
         }
         if (mode === "play" && level) {
+          updateHorses(dt);
           if (dying) {
             afterDeath(dt);
           } else {

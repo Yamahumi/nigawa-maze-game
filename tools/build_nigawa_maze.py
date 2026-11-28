@@ -263,6 +263,18 @@ LANDMARKS = [
         "placement": "user",
         "note": "OSM node/7025294529（万代の隣、生スナップは (95,48)）を追加したあと、マンダイと同じく駅から約60%・西へ移動して (66,48)。",
     },
+    {
+        "id": "piano",
+        "name": "ピアノきょうしつ",
+        "lat": 34.7758764,
+        "lon": 135.3542633,
+        "osm": None,
+        "kind": "piano",
+        "role": "bonus",
+        "bonus": 600,
+        "placement": "user",
+        "note": "ユーザー指定：いえ(29,47)とにがわしょうがっこう(22,20)の中間付近。理想セル(25,33)は壁のため、最も近い南北の道路 (26,40)。",
+    },
 ]
 
 
@@ -1031,7 +1043,7 @@ def main():
     # ASCII preview (downsampled)
     print("\n--- preview ---")
     marks = {}
-    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J", "lawson": "L", "jhs": "T", "laundry": "W", "bigboy": "Y", "cocokara": "F"}
+    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J", "lawson": "L", "jhs": "T", "laundry": "W", "bigboy": "Y", "cocokara": "F", "piano": "A"}
     for lm in LANDMARKS:
         marks[tuple(lm["cell"])] = letters[lm["id"]]
     for x, y in pellets:
