@@ -45,6 +45,7 @@
     station: "にがわえき",
     nursery: "ウエルほいくえん",
     mandai: "マンダイ",
+    cocokara: "ココカラファイン",
     racecourse: "はんしんけいばじょう",
     mcdonalds: "マクドナルド",
     bigboy: "ビッグボーイ",
@@ -1057,6 +1058,14 @@
         ctx.stroke();
         ctx.fillStyle = "#2a6a90";
         ctx.fillRect(-r * 0.55, r * 0.48, r * 1.1, r * 0.16);
+      } else if (lm.kind === "pharmacy") {
+        ctx.fillStyle = lm.visited ? "#c8f0e0" : "#3cbf9a";
+        ctx.beginPath();
+        rounded(-r * 0.8, -r * 0.7, r * 1.6, r * 1.5, 4);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(-r * 0.16, -r * 0.48, r * 0.32, r * 0.96);
+        ctx.fillRect(-r * 0.42, -r * 0.16, r * 0.84, r * 0.32);
       } else if (lm.kind === "shrine") {
         // とりい
         ctx.fillStyle = lm.visited ? "#ffb0a0" : "#e24a3a";
@@ -1081,9 +1090,10 @@
     const fs = Math.max(15, Math.min(22, tile * 0.62));
     ctx.font = "bold " + fs + "px " + fontFamily;
     const boxes = [];
-    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", dentist: "down", benten: "down", kumano: "up" };
+    const prefer = { home: "left", lawson: "left", kumon: "down", pannel: "up", school: "down", jhs: "right", nursery: "down", station: "down", hoshi: "left", laundry: "up", mcdonalds: "up", bigboy: "down", mandai: "up", cocokara: "down", dentist: "down", benten: "down", kumano: "up" };
     function nameLines(name) {
       if (name === "たからづかちゅうがっこう") return ["たからづか", "ちゅうがっこう"];
+      if (name === "ココカラファイン") return ["ココカラ", "ファイン"];
       return [name];
     }
     function boxFrom(lines, x, y, align, base) {

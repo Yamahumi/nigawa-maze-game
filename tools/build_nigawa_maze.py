@@ -60,12 +60,14 @@ LANDMARKS = [
     {
         "id": "mandai",
         "name": "万代",
-        "lat": 34.7753683,
-        "lon": 135.3707962,
+        "lat": 34.7742954,
+        "lon": 135.3646092,
         "osm": "node/7025294528",
         "kind": "shop",
         "role": "bonus",
         "bonus": 1000,
+        "placement": "user",
+        "note": "ユーザー指定：駅からの距離を約60%にし、さらに西へ。旧スナップ (95,48) → (69,48)。EXTENTは元のOSM位置で固定。",
     },
     {
         "id": "racecourse",
@@ -249,6 +251,18 @@ LANDMARKS = [
         "placement": "user",
         "note": "ユーザー指定：マクドナルドのすぐ南の道路 (39,16)。OSM位置は使わない。",
     },
+    {
+        "id": "cocokara",
+        "name": "ココカラファイン",
+        "lat": 34.7742954,
+        "lon": 135.3638874,
+        "osm": "node/7025294529",
+        "kind": "pharmacy",
+        "role": "bonus",
+        "bonus": 600,
+        "placement": "user",
+        "note": "OSM node/7025294529（万代の隣、生スナップは (95,48)）を追加したあと、マンダイと同じく駅から約60%・西へ移動して (66,48)。",
+    },
 ]
 
 
@@ -287,9 +301,14 @@ def parse_ways(path: Path):
 # The playable window is fixed by these map-defining landmarks plus padding.
 # Later pins already inside the window must not grow it another 280m.
 EXTENT_IDS = {
-    "station", "nursery", "mandai", "racecourse", "mcdonalds",
+    "station", "nursery", "racecourse", "mcdonalds",
     "benten", "coop", "ohsho", "school",
 }
+
+# Original 万代 OSM pin so moving the playable マンダイ west does not shrink the map.
+EXTENT_ANCHORS = [
+    {"lat": 34.7753683, "lon": 135.3707962},
+]
 
 
 def landmark_bounds_m(cell_m: float):
@@ -301,6 +320,11 @@ def landmark_bounds_m(cell_m: float):
             continue
         x = (lm["lon"] - STATION_WIKI[1]) * m_lon
         y = (STATION_WIKI[0] - lm["lat"]) * m_lat
+        xs.append(x)
+        ys.append(y)
+    for an in EXTENT_ANCHORS:
+        x = (an["lon"] - STATION_WIKI[1]) * m_lon
+        y = (STATION_WIKI[0] - an["lat"]) * m_lat
         xs.append(x)
         ys.append(y)
     pad = 280.0
@@ -1007,7 +1031,7 @@ def main():
     # ASCII preview (downsampled)
     print("\n--- preview ---")
     marks = {}
-    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J", "lawson": "L", "jhs": "T", "laundry": "W", "bigboy": "Y"}
+    letters = {"station": "S", "nursery": "N", "mandai": "M", "racecourse": "R", "mcdonalds": "K", "benten": "P", "coop": "C", "ohsho": "O", "school": "E", "hoshi": "H", "dentist": "D", "home": "I", "pannel": "B", "kumon": "U", "kumano": "J", "lawson": "L", "jhs": "T", "laundry": "W", "bigboy": "Y", "cocokara": "F"}
     for lm in LANDMARKS:
         marks[tuple(lm["cell"])] = letters[lm["id"]]
     for x, y in pellets:

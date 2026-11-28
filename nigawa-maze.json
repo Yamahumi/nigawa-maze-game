@@ -115,22 +115,24 @@
     {
       "id": "mandai",
       "name": "万代",
-      "lat": 34.7753683,
-      "lon": 135.3707962,
+      "lat": 34.7742954,
+      "lon": 135.3646092,
       "osm": "node/7025294528",
       "kind": "shop",
       "role": "bonus",
       "bonus": 1000,
+      "placement": "user",
+      "note": "ユーザー指定：駅からの距離を約60%にし、さらに西へ。旧スナップ (95,48) → (69,48)。EXTENTは元のOSM位置で固定。",
       "raw_cell": [
-        95,
-        43
-      ],
-      "cell": [
-        95,
+        69,
         48
       ],
-      "snap_cells": 5,
-      "snap_meters": 110.0
+      "cell": [
+        69,
+        48
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
     },
     {
       "id": "racecourse",
@@ -473,6 +475,28 @@
       ],
       "snap_cells": 0,
       "snap_meters": 0.0
+    },
+    {
+      "id": "cocokara",
+      "name": "ココカラファイン",
+      "lat": 34.7742954,
+      "lon": 135.3638874,
+      "osm": "node/7025294529",
+      "kind": "pharmacy",
+      "role": "bonus",
+      "bonus": 600,
+      "placement": "user",
+      "note": "OSM node/7025294529（万代の隣、生スナップは (95,48)）を追加したあと、マンダイと同じく駅から約60%・西へ移動して (66,48)。",
+      "raw_cell": [
+        66,
+        48
+      ],
+      "cell": [
+        66,
+        48
+      ],
+      "snap_cells": 0,
+      "snap_meters": 0.0
     }
   ],
   "playerStart": [
@@ -485,16 +509,16 @@
       14
     ],
     [
-      89,
-      50
-    ],
-    [
       72,
       3
     ],
     [
       0,
       8
+    ],
+    [
+      98,
+      55
     ]
   ],
   "powerPellets": [
@@ -2011,14 +2035,6 @@
     ],
     [
       30,
-      48
-    ],
-    [
-      66,
-      48
-    ],
-    [
-      69,
       48
     ],
     [
